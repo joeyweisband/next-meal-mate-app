@@ -1,8 +1,9 @@
 import React from "react";
 import { theme } from "@/constants/theme";
+import { MealRecipe } from "../types/meal";
 
 interface MealCardProps {
-  meal: any;
+  meal: MealRecipe;
   mealType: string;
   completed?: boolean;
   onPress: () => void;

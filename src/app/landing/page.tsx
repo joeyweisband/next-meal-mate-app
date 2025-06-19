@@ -7,7 +7,7 @@ export default function LandingPage() {
   return (
     <div style={{ maxWidth: 1200, margin: "32px auto", padding: 24 }}>
       <div style={{ borderRadius: 24, overflow: "hidden", marginBottom: 32 }}>
-        <img
+        <Image
           src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=60"
           alt="MealMate Hero"
           width={1800}

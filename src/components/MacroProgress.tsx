@@ -1,5 +1,4 @@
 import React from 'react';
-import { theme } from '@/constants/theme';
 
 interface MacroProgressProps {
   consumed: { calories: number; protein: number; carbs: number; fat: number };

@@ -4,18 +4,17 @@ import Card from '../../components/Card';
 import Button from '../../components/Button';
 import MealCard from '../../components/MealCard';
 import { useMealStore } from '../../store/meal-store';
+import { MealPlan, MealRecipe } from '../../types/meal';
 
 export default function MealPlanScreen() {
   const {
     mealPlans,
     currentDate,
-    setCurrentDate,
     generateMealPlan,
     isLoading
   } = useMealStore();
-
   const [selectedDate, setSelectedDate] = useState(currentDate);
-  const selectedPlan = mealPlans.find((plan: any) => plan.date === selectedDate);
+  const selectedPlan = mealPlans.find((plan: MealPlan) => plan.date === selectedDate);
 
   const handleMealPress = (mealId: string) => {
     window.location.href = `/meal/${mealId}`;
@@ -108,7 +107,7 @@ export default function MealPlanScreen() {
               onPress={() => handleMealPress(selectedPlan.meals.dinner!.id)}
             />
           )}
-          {selectedPlan.meals.snacks && selectedPlan.meals.snacks.map((snack: any) => (
+          {selectedPlan.meals.snacks && selectedPlan.meals.snacks.map((snack: MealRecipe) => (
             <MealCard
               key={snack.id}
               meal={snack}
