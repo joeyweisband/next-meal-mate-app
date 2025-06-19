@@ -14,16 +14,15 @@ export default function ProfilePage() {
   }
 
   return (
-    <div style={{ maxWidth: 480, margin: '40px auto', padding: 24, background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px #0001' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-        <UserButton afterSignOutUrl="/sign-in" />
+    <div style={{ maxWidth: 480, margin: '40px auto', padding: 24, background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px #0001' }}>      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+        <UserButton afterSignOutUrl="/landing" />
         <div>
           <div style={{ fontWeight: 600, fontSize: 22 }}>{user.fullName || user.username || user.emailAddresses[0]?.emailAddress}</div>
           <div style={{ color: '#888', fontSize: 14 }}>{user.emailAddresses[0]?.emailAddress}</div>
         </div>
       </div>
       <div style={{ marginTop: 32 }}>
-        <SignOutButton afterSignOutUrl="/sign-in" />
+        <SignOutButton afterSignOutUrl="/landing" />
       </div>
     </div>
   );

@@ -1,14 +1,21 @@
+"use client";
 import React from 'react'
-import { useAuthStore } from '../store/auth-store'
+import { useClerk } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 
-const SignOutButton: React.FC<{ afterSignOutUrl?: string }> = ({ afterSignOutUrl }) => {
-  const { signOut } = useAuthStore()
-  const handleSignOut = () => {
-    signOut()
-    if (afterSignOutUrl) {
-      window.location.href = afterSignOutUrl
+const SignOutButton: React.FC<{ afterSignOutUrl?: string }> = ({ afterSignOutUrl = '/landing' }) => {
+  const { signOut } = useClerk()
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      router.push(afterSignOutUrl)
+    } catch (error) {
+      console.error('Sign out error:', error)
     }
   }
+
   return (
     <button
       onClick={handleSignOut}
