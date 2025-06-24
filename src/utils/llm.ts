@@ -1,51 +1,97 @@
-import axios from 'axios';
+import { MealPlan, MealRecipe } from '../types/meal';
 
-// Define the structure for a meal (reuse your MealRecipe type if possible)
-export interface LLMMeal {
-  name: string;
-  description: string;
-  imageUrl?: string;
-  prepTime: number;
-  cookTime: number;
-  servings: number;
-  ingredients: Array<{ name: string; amount: number; unit: string }>;
-  instructions: string[];
+interface AIMealData {
+  title: string;
+  ingredients: string[];
+  preparation: string[];
   macros: {
     calories: number;
     protein: number;
     carbs: number;
     fat: number;
   };
+  reasoning: string;
 }
 
-// Function to query the LLM for 3 meals
-export async function fetchMealsFromLLM(): Promise<LLMMeal[]> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  const prompt = `Generate 3 healthy meal recipes. For each, provide:\n- name\n- description\n- imageUrl (use a royalty-free placeholder if needed)\n- prepTime (minutes)\n- cookTime (minutes)\n- servings\n- ingredients (array of {name, amount, unit})\n- instructions (array of steps)\n- macros (calories, protein, carbs, fat)`;
+interface DailyMealPlan {
+  breakfast: AIMealData;
+  lunch: AIMealData;
+  dinner: AIMealData;
+  snack: AIMealData;
+}
 
-  const response = await axios.post(
-    'https://api.openai.com/v1/chat/completions',
-    {
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-      max_tokens: 1200
-    },
-    {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
-
-  // Parse the LLM response to extract meal data
-  // (Assume the LLM returns a JSON array of meals)
+export async function generateDailyMealPlan(
+  userGoal?: any,
+  dietPreferences?: any,
+  userMetrics?: any
+): Promise<MealPlan> {
   try {
-    const text = response.data.choices[0].message.content;
-    const meals: LLMMeal[] = JSON.parse(text);
-    return meals;
-  } catch (e) {
-    throw new Error('Failed to parse LLM meal data: ' + e);
+    const response = await fetch('/api/generate-meal-plan', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userGoal,
+        dietPreferences,
+        userMetrics,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to generate meal plan: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const { mealPlan }: { mealPlan: DailyMealPlan } = data;
+
+    // Convert AI response to our MealPlan format
+    const currentDate = new Date().toISOString().split('T')[0];
+    
+    const convertAIMealToRecipe = (aiMeal: AIMealData, mealType: string): MealRecipe => ({
+      id: `${mealType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: aiMeal.title,
+      description: aiMeal.reasoning,
+      imageUrl: `/meal-placeholder.svg`, // You can add meal image generation later
+      prepTime: 15, // Default prep time
+      cookTime: 20, // Default cook time
+      servings: 1,
+      ingredients: aiMeal.ingredients.map((ingredient, index) => ({
+        name: ingredient,
+        amount: 1, // Default amount
+        unit: 'unit', // Default unit
+      })),
+      instructions: aiMeal.preparation,
+      macros: aiMeal.macros,
+    });
+
+    const breakfast = convertAIMealToRecipe(mealPlan.breakfast, 'breakfast');
+    const lunch = convertAIMealToRecipe(mealPlan.lunch, 'lunch');
+    const dinner = convertAIMealToRecipe(mealPlan.dinner, 'dinner');
+    const snack = convertAIMealToRecipe(mealPlan.snack, 'snack');
+
+    // Calculate total macros
+    const totalMacros = {
+      calories: breakfast.macros.calories + lunch.macros.calories + dinner.macros.calories + snack.macros.calories,
+      protein: breakfast.macros.protein + lunch.macros.protein + dinner.macros.protein + snack.macros.protein,
+      carbs: breakfast.macros.carbs + lunch.macros.carbs + dinner.macros.carbs + snack.macros.carbs,
+      fat: breakfast.macros.fat + lunch.macros.fat + dinner.macros.fat + snack.macros.fat,
+    };
+
+    return {
+      id: `plan-${Date.now()}`,
+      date: currentDate,
+      meals: {
+        breakfast,
+        lunch,
+        dinner,
+        snacks: [snack],
+      },
+      totalMacros,
+      completed: [false, false, false, false],
+    };
+  } catch (error) {
+    console.error('Error generating daily meal plan:', error);
+    throw new Error('Failed to generate meal plan');
   }
 }

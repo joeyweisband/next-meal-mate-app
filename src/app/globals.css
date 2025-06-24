@@ -24,3 +24,26 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .meal-plan-container {
+    padding: 0;
+  }
+  
+  .meal-card {
+    margin: 0.5rem;
+    border-radius: 0.75rem;
+  }
+}

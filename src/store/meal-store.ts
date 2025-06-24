@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { MealPlan, MealRecipe, DailyProgress } from '../types/meal';
+import { User } from '../types/user';
 import { mockMealPlans } from '../mocks/meals';
+import { generateDailyMealPlan } from '../utils/llm';
 
 interface MealState {
   mealPlans: MealPlan[];
@@ -9,14 +11,17 @@ interface MealState {
   dailyProgress: Record<string, DailyProgress>;
   isLoading: boolean;
   error: string | null;
+  userProfile: User | null;
   
   // Actions
   fetchMealPlans: () => Promise<void>;
-  generateMealPlan: () => Promise<void>;
+  generateMealPlan: (date?: string) => Promise<void>;
+  generateAIMealPlan: (date?: string) => Promise<void>;
   markMealAsCompleted: (date: string, mealIndex: number, completed: boolean) => void;
   swapMeal: (date: string, mealType: string, newMeal: MealRecipe) => void;
   getDailyProgress: (date: string) => DailyProgress | null;
   setCurrentDate: (date: string) => void;
+  setUserProfile: (user: User) => void;
 }
 
 export const useMealStore = create<MealState>()(
@@ -27,6 +32,7 @@ export const useMealStore = create<MealState>()(
       dailyProgress: {},
       isLoading: false,
       error: null,
+      userProfile: null,
 
       fetchMealPlans: async () => {
         set({ isLoading: true, error: null });
@@ -62,15 +68,16 @@ export const useMealStore = create<MealState>()(
         }
       },
 
-      generateMealPlan: async () => {
+      generateMealPlan: async (date?: string) => {
         set({ isLoading: true, error: null });
         try {
           await new Promise(resolve => setTimeout(resolve, 1500));
+          const targetDate = date || new Date().toISOString().split('T')[0];
           const newPlan: MealPlan = { ...mockMealPlans[0] };
           newPlan.id = Date.now().toString();
-          newPlan.date = new Date().toISOString().split('T')[0];
+          newPlan.date = targetDate;
           set((state: MealState) => ({ 
-            mealPlans: [...state.mealPlans, newPlan],
+            mealPlans: [...state.mealPlans.filter(p => p.date !== targetDate), newPlan],
             isLoading: false 
           }));
           const totalMeals = Object.keys(newPlan.meals).length;
@@ -95,6 +102,54 @@ export const useMealStore = create<MealState>()(
         } catch (error) {
           set({ 
             error: error instanceof Error ? error.message : "Failed to generate meal plan", 
+            isLoading: false 
+          });
+        }
+      },
+
+      generateAIMealPlan: async (date?: string) => {
+        const state = get();
+        set({ isLoading: true, error: null });
+        try {
+          const targetDate = date || new Date().toISOString().split('T')[0];
+          const aiMealPlan = await generateDailyMealPlan(
+            state.userProfile?.goal,
+            state.userProfile?.dietPreferences,
+            state.userProfile?.metrics
+          );
+          
+          // Update the date to match the target date
+          aiMealPlan.date = targetDate;
+          aiMealPlan.id = `ai-plan-${targetDate}-${Date.now()}`;
+          
+          set((state: MealState) => ({ 
+            mealPlans: [...state.mealPlans.filter(p => p.date !== targetDate), aiMealPlan],
+            isLoading: false 
+          }));
+          
+          const totalMeals = Object.values(aiMealPlan.meals).flat().length;
+          set((state: MealState) => ({
+            dailyProgress: {
+              ...state.dailyProgress,
+              [aiMealPlan.date]: {
+                date: aiMealPlan.date,
+                targetMacros: aiMealPlan.totalMacros,
+                consumedMacros: {
+                  calories: 0,
+                  protein: 0,
+                  carbs: 0,
+                  fat: 0
+                },
+                waterIntake: 0,
+                completedMeals: 0,
+                totalMeals
+              }
+            }
+          }));
+        } catch (error) {
+          console.error('AI meal plan generation failed:', error);
+          set({ 
+            error: error instanceof Error ? error.message : "Failed to generate AI meal plan", 
             isLoading: false 
           });
         }
@@ -262,6 +317,10 @@ export const useMealStore = create<MealState>()(
 
       setCurrentDate: (date: string) => {
         set({ currentDate: date });
+      },
+
+      setUserProfile: (user: User) => {
+        set({ userProfile: user });
       }
     }),
     {
