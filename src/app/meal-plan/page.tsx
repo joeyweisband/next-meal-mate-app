@@ -549,7 +549,7 @@ export function DetailedMealCard({ meal, isSelected, onSelect }: DetailedMealCar
 
         {/* Reasoning */}
         <div className="bg-gray-50 p-4 rounded-xl mb-4">
-          <p className="text-gray-700 text-sm italic">"{meal.reasoning}"</p>
+          <p className="text-gray-700 text-sm italic">&quot{meal.reasoning}&quot</p>
         </div>
 
         {/* Ingredients */}
