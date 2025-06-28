@@ -486,7 +486,7 @@ const getMealTypeIcon = (type: string) => {
   }
 };
 
-export function DetailedMealCard({ meal, isSelected, onSelect }: DetailedMealCardProps) {
+function DetailedMealCard({ meal, isSelected, onSelect }: DetailedMealCardProps) {
   return (
     <div 
       className={`bg-white rounded-2xl shadow-sm border transition-all duration-200 cursor-pointer hover:shadow-md transform hover:-translate-y-1 ${
