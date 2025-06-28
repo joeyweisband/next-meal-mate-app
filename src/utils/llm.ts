@@ -21,9 +21,9 @@ interface DailyMealPlan {
 }
 
 export async function generateDailyMealPlan(
-  userGoal?: any,
-  dietPreferences?: any,
-  userMetrics?: any
+  userGoal?: unknown,
+  dietPreferences?: unknown,
+  userMetrics?: unknown
 ): Promise<MealPlan> {
   try {
     const response = await fetch('/api/generate-meal-plan', {
@@ -56,7 +56,7 @@ export async function generateDailyMealPlan(
       prepTime: 15, // Default prep time
       cookTime: 20, // Default cook time
       servings: 1,
-      ingredients: aiMeal.ingredients.map((ingredient, index) => ({
+      ingredients: aiMeal.ingredients.map((ingredient) => ({
         name: ingredient,
         amount: 1, // Default amount
         unit: 'unit', // Default unit

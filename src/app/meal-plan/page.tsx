@@ -366,7 +366,7 @@ export default function MealPlanScreen() {
               fontWeight: '600',
               color: '#2c3e50'
             }}>
-              Today's Meals
+              Today&#39s Meals
             </h3>
           </div>
           

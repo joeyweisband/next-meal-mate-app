@@ -120,7 +120,7 @@ Make sure the macros add up to appropriate daily totals for the user's goal and 
     let mealPlan: DailyMealPlan;
     try {
       mealPlan = JSON.parse(mealPlanText);
-    } catch (parseError) {
+    } catch {
       console.error('Failed to parse OpenAI response:', mealPlanText);
       throw new Error('Invalid JSON response from OpenAI');
     }
@@ -135,38 +135,58 @@ Make sure the macros add up to appropriate daily totals for the user's goal and 
   }
 }
 
-function getGoalDescription(userGoal: any): string {
-  if (!userGoal) return 'maintain current weight';
-  
-  switch (userGoal.type) {
+function getGoalDescription(userGoal: unknown): string {
+  if (!userGoal || typeof userGoal !== 'object' || userGoal === null) return 'maintain current weight';
+
+  const goal = userGoal as {
+    type?: string;
+    targetWeight?: number;
+    timeframe?: number;
+  };
+
+  switch (goal.type) {
     case 'lose_weight':
-      return `lose weight${userGoal.targetWeight ? ` to ${userGoal.targetWeight}kg` : ''}${userGoal.timeframe ? ` in ${userGoal.timeframe} weeks` : ''}`;
+      return `lose weight${goal.targetWeight ? ` to ${goal.targetWeight}kg` : ''}${goal.timeframe ? ` in ${goal.timeframe} weeks` : ''}`;
     case 'gain_muscle':
-      return `gain muscle mass${userGoal.targetWeight ? ` to ${userGoal.targetWeight}kg` : ''}${userGoal.timeframe ? ` in ${userGoal.timeframe} weeks` : ''}`;
+      return `gain muscle mass${goal.targetWeight ? ` to ${goal.targetWeight}kg` : ''}${goal.timeframe ? ` in ${goal.timeframe} weeks` : ''}`;
     case 'maintain_weight':
     default:
       return 'maintain current weight';
   }
 }
 
-function getDietDescription(dietPreferences: any): string {
-  if (!dietPreferences) return 'standard diet';
-  
-  let description = dietPreferences.dietType || 'standard';
-  
-  if (dietPreferences.allergies && dietPreferences.allergies.length > 0) {
-    description += `, avoiding ${dietPreferences.allergies.join(', ')}`;
+function getDietDescription(dietPreferences: unknown): string {
+  if (!dietPreferences || typeof dietPreferences !== 'object' || dietPreferences === null) return 'standard diet';
+
+  const prefs = dietPreferences as {
+    dietType?: string;
+    allergies?: string[];
+    customRestrictions?: string;
+  };
+
+  let description = prefs.dietType || 'standard';
+
+  if (prefs.allergies && prefs.allergies.length > 0) {
+    description += `, avoiding ${prefs.allergies.join(', ')}`;
   }
-  
-  if (dietPreferences.customRestrictions) {
-    description += `, ${dietPreferences.customRestrictions}`;
+
+  if (prefs.customRestrictions) {
+    description += `, ${prefs.customRestrictions}`;
   }
-  
+
   return description;
 }
 
-function getMetricsDescription(userMetrics: any): string {
-  if (!userMetrics) return 'average adult';
-  
-  return `${userMetrics.age || 30} year old ${userMetrics.gender || 'person'}, ${userMetrics.height || 170}cm, ${userMetrics.weight || 70}kg, ${userMetrics.activityLevel || 'moderate'} activity level`;
+function getMetricsDescription(userMetrics: unknown): string {
+  if (!userMetrics || typeof userMetrics !== 'object' || userMetrics === null) return 'average adult';
+
+  const metrics = userMetrics as {
+    age?: number;
+    gender?: string;
+    height?: number;
+    weight?: number;
+    activityLevel?: string;
+  };
+
+  return `${metrics.age || 30} year old ${metrics.gender || 'person'}, ${metrics.height || 170}cm, ${metrics.weight || 70}kg, ${metrics.activityLevel || 'moderate'} activity level`;
 }
