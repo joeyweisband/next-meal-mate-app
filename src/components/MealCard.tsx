@@ -39,7 +39,7 @@ const MealCard: React.FC<MealCardProps> = ({
       onClick={onPress}
     >
       <div style={{ position: "relative", height: 150 }}>
-        <img src={meal.imageUrl} alt={meal.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        <img alt={meal.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         <div style={{
           position: "absolute",
           top: theme.spacing.sm,
