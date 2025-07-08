@@ -21,7 +21,7 @@ export interface MealRecipe {
   id: string;
   name: string;
   description: string;
-  imageUrl: string;
+  // imageUrl: string;
   prepTime: number; // in minutes
   cookTime: number; // in minutes
   servings: number;

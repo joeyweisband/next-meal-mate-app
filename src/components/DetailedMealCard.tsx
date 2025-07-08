@@ -64,12 +64,12 @@ export default function DetailedMealCard({ meal, isSelected, onSelect }: Detaile
         
         {/* Meal Image */}
         <div className="h-48 relative overflow-hidden rounded-t-2xl">
-          <Image
+          {/* <Image
             src={meal.imageUrl || '/meal-placeholder.svg'}
             alt={meal.title}
             fill
             className="object-cover"
-          />
+          /> */}
           {/* Gradient overlay for better text readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
         </div>

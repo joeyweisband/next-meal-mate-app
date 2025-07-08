@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import MealCard from '../../components/MealCard';
@@ -11,12 +11,14 @@ export default function MealPlanScreen() {
   const {
     mealPlans,
     currentDate,
-    generateMealPlan,
     generateAIMealPlan,
     isLoading,
     error
   } = useMealStore();
-  const [selectedDate, setSelectedDate] = useState(currentDate);  const [selectedMealIds, setSelectedMealIds] = useState<string[]>([]);
+  // Always use today's date as the base
+  const today = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [selectedMealIds, setSelectedMealIds] = useState<string[]>([]);
   const selectedPlan = mealPlans.find((plan: MealPlan) => plan.date === selectedDate);
   
   // Get selected meals for summary
@@ -26,6 +28,12 @@ export default function MealPlanScreen() {
     ...(selectedPlan.meals.dinner && selectedMealIds.includes(selectedPlan.meals.dinner.id) ? [selectedPlan.meals.dinner] : []),
     ...(selectedPlan.meals.snacks?.filter(snack => selectedMealIds.includes(snack.id)) || [])
   ] : [];
+
+  // If you want to force reset to today on mount (optional, but ensures consistency)
+  useEffect(() => {
+    setSelectedDate(today);
+  }, [today]);
+
   const handleMealPress = (mealId: string) => {
     // Toggle selection
     setSelectedMealIds(prev => 
@@ -36,20 +44,25 @@ export default function MealPlanScreen() {
   };
 
   const handlePreviousDay = () => {
+    // Prevent going before today
     const currentDateObj = new Date(selectedDate);
     currentDateObj.setDate(currentDateObj.getDate() - 1);
     const newDate = currentDateObj.toISOString().split('T')[0];
-    setSelectedDate(newDate);
+    if (newDate >= today) {
+      setSelectedDate(newDate);
+    }
   };
 
   const handleNextDay = () => {
+    // Prevent going more than 7 days ahead
     const currentDateObj = new Date(selectedDate);
     currentDateObj.setDate(currentDateObj.getDate() + 1);
+    const maxDateObj = new Date(today);
+    maxDateObj.setDate(maxDateObj.getDate() + 7);
     const newDate = currentDateObj.toISOString().split('T')[0];
-    setSelectedDate(newDate);
-  };
-  const handleGeneratePlan = () => {
-    generateMealPlan(selectedDate);
+    if (currentDateObj <= maxDateObj) {
+      setSelectedDate(newDate);
+    }
   };
 
   const handleGenerateAIPlan = () => {
@@ -64,6 +77,7 @@ export default function MealPlanScreen() {
       day: 'numeric',
     });
   };
+
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -84,14 +98,16 @@ export default function MealPlanScreen() {
       }}>
         <button 
           onClick={handlePreviousDay} 
+          disabled={selectedDate === today}
           style={{ 
             background: 'none', 
             border: 'none', 
             fontSize: '1.5rem', 
-            cursor: 'pointer',
+            cursor: selectedDate === today ? 'not-allowed' : 'pointer',
             padding: '0.5rem',
             borderRadius: '50%',
-            transition: 'background-color 0.2s'
+            transition: 'background-color 0.2s',
+            opacity: selectedDate === today ? 0.5 : 1,
           }}
         >
           ←
@@ -130,14 +146,34 @@ export default function MealPlanScreen() {
           
           <button 
             onClick={handleNextDay} 
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              fontSize: '1.5rem', 
-              cursor: 'pointer',
+            disabled={
+              (() => {
+                const maxDateObj = new Date(today);
+                maxDateObj.setDate(maxDateObj.getDate() + 7);
+                return new Date(selectedDate).toISOString().split('T')[0] === maxDateObj.toISOString().split('T')[0];
+              })()
+            }
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '1.5rem',
+              cursor: (() => {
+                const maxDateObj = new Date(today);
+                maxDateObj.setDate(maxDateObj.getDate() + 7);
+                return new Date(selectedDate).toISOString().split('T')[0] === maxDateObj.toISOString().split('T')[0]
+                  ? 'not-allowed'
+                  : 'pointer';
+              })(),
               padding: '0.5rem',
               borderRadius: '50%',
-              transition: 'background-color 0.2s'
+              transition: 'background-color 0.2s',
+              opacity: (() => {
+                const maxDateObj = new Date(today);
+                maxDateObj.setDate(maxDateObj.getDate() + 7);
+                return new Date(selectedDate).toISOString().split('T')[0] === maxDateObj.toISOString().split('T')[0]
+                  ? 0.5
+                  : 1;
+              })(),
             }}
           >
             →
@@ -209,20 +245,6 @@ export default function MealPlanScreen() {
                   fontSize: '1rem',
                   fontWeight: '600',
                   boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
-                }} 
-              />
-              <Button 
-                title="📝 Generate Basic Plan" 
-                onClick={handleGeneratePlan} 
-                loading={isLoading}
-                style={{ 
-                  background: '#fff',
-                  color: '#667eea',
-                  border: '2px solid #667eea',
-                  borderRadius: '0.75rem',
-                  padding: '1rem',
-                  fontSize: '1rem',
-                  fontWeight: '600'
                 }} 
               />
             </div>
@@ -365,36 +387,36 @@ export default function MealPlanScreen() {
               fontWeight: '600',
               color: '#2c3e50'
             }}>
-              Today&#39s Meals
+              Today&#39;s Meals
             </h3>
           </div>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {selectedPlan.meals.breakfast && (
+            {selectedPlan?.meals?.breakfast?.id && (
               <MealCard
-                meal={selectedPlan.meals.breakfast}
+                meal={selectedPlan.meals.breakfast!}
                 mealType="breakfast"
                 onPress={() => handleMealPress(selectedPlan.meals.breakfast!.id)}
-                isSelected={selectedMealIds.includes(selectedPlan.meals.breakfast.id)}
+                isSelected={selectedMealIds.includes(selectedPlan.meals.breakfast!.id)}
               />
             )}
-            {selectedPlan.meals.lunch && (
+            {selectedPlan?.meals?.lunch?.id && (
               <MealCard
-                meal={selectedPlan.meals.lunch}
+                meal={selectedPlan.meals.lunch!}
                 mealType="lunch"
                 onPress={() => handleMealPress(selectedPlan.meals.lunch!.id)}
-                isSelected={selectedMealIds.includes(selectedPlan.meals.lunch.id)}
+                isSelected={selectedMealIds.includes(selectedPlan.meals.lunch!.id)}
               />
             )}
-            {selectedPlan.meals.dinner && (
+            {selectedPlan?.meals?.dinner?.id && (
               <MealCard
-                meal={selectedPlan.meals.dinner}
+                meal={selectedPlan.meals.dinner!}
                 mealType="dinner"
                 onPress={() => handleMealPress(selectedPlan.meals.dinner!.id)}
-                isSelected={selectedMealIds.includes(selectedPlan.meals.dinner.id)}
+                isSelected={selectedMealIds.includes(selectedPlan.meals.dinner!.id)}
               />
             )}
-            {selectedPlan.meals.snacks && selectedPlan.meals.snacks.map((snack: MealRecipe) => (
+            {Array.isArray(selectedPlan?.meals?.snacks) && selectedPlan.meals.snacks.map((snack: MealRecipe) => (
               <MealCard
                 key={snack.id}
                 meal={snack}
@@ -411,36 +433,6 @@ export default function MealPlanScreen() {
         meals={selectedMeals}
         onClearSelection={() => setSelectedMealIds([])}
       />
-
-      {/* Regeneration Section */}
-      {selectedPlan?.meals.breakfast && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Generate New Meal Plan
-          </h3>
-          <div className="space-y-4">
-            <button
-              onClick={handleGenerateAIPlan}
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-6 rounded-xl font-medium hover:from-purple-700 hover:to-pink-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Generating AI Meal Plan...
-                </div>
-              ) : (
-                <>
-                  🤖 Generate AI-Powered Meal Plan
-                </>
-              )}
-            </button>
-            <p className="text-sm text-gray-600 text-center">
-              Get personalized meals based on your goals, preferences, and dietary needs
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

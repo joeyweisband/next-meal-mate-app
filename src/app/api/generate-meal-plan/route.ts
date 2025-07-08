@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import type { APIMealPlan, APIMealPlanResponse } from '../../schemas/api-meal';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -97,27 +98,22 @@ Return the response as a JSON object with the following structure:
 Make sure the macros add up to appropriate daily totals for the user's goal and the meals are practical to prepare.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert nutritionist. Always respond with valid JSON only, no additional text or formatting.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-    });    const mealPlanText = completion.choices[0].message.content;
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.9,
+    });
+
+    console.log('OpenAI API response:', completion); // <-- Add this
+
+    const mealPlanText = completion.choices[0].message.content;
+    console.log('Meal plan text:', mealPlanText); // <-- Add this
     
     if (!mealPlanText) {
       throw new Error('No content received from OpenAI');
     }
     
     // Parse the JSON response
-    let mealPlan: DailyMealPlan;
+    let mealPlan: APIMealPlan;
     try {
       mealPlan = JSON.parse(mealPlanText);
     } catch {
@@ -125,7 +121,11 @@ Make sure the macros add up to appropriate daily totals for the user's goal and 
       throw new Error('Invalid JSON response from OpenAI');
     }
 
-    return NextResponse.json({ mealPlan });
+    // Optionally: Validate mealPlan here (runtime check)
+    // You can use zod or ajv for runtime validation if desired
+
+    const response: APIMealPlanResponse = { mealPlan };
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error generating meal plan:', error);
     return NextResponse.json(

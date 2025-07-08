@@ -1,4 +1,5 @@
 import { MealPlan, MealRecipe } from '../types/meal';
+import type { APIMealPlanResponse } from '../app/schemas/api-meal';
 
 interface AIMealData {
   title: string;
@@ -42,8 +43,8 @@ export async function generateDailyMealPlan(
       throw new Error(`Failed to generate meal plan: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    const { mealPlan }: { mealPlan: DailyMealPlan } = data;
+    const data: APIMealPlanResponse = await response.json();
+    const { mealPlan } = data;
 
     // Convert AI response to our MealPlan format
     const currentDate = new Date().toISOString().split('T')[0];
@@ -52,7 +53,7 @@ export async function generateDailyMealPlan(
       id: `${mealType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: aiMeal.title,
       description: aiMeal.reasoning,
-      imageUrl: `/meal-placeholder.svg`, // You can add meal image generation later
+      // imageUrl: `/meal-placeholder.svg`, // You can add meal image generation later
       prepTime: 15, // Default prep time
       cookTime: 20, // Default cook time
       servings: 1,

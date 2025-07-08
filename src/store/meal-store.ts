@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { MealPlan, MealRecipe, DailyProgress } from '../types/meal';
 import { User } from '../types/user';
-import { mockMealPlans } from '../mocks/meals';
 import { generateDailyMealPlan } from '../utils/llm';
 
 interface MealState {
@@ -14,8 +13,6 @@ interface MealState {
   userProfile: User | null;
   
   // Actions
-  fetchMealPlans: () => Promise<void>;
-  generateMealPlan: (date?: string) => Promise<void>;
   generateAIMealPlan: (date?: string) => Promise<void>;
   markMealAsCompleted: (date: string, mealIndex: number, completed: boolean) => void;
   swapMeal: (date: string, mealType: string, newMeal: MealRecipe) => void;
@@ -33,79 +30,6 @@ export const useMealStore = create<MealState>()(
       isLoading: false,
       error: null,
       userProfile: null,
-
-      fetchMealPlans: async () => {
-        set({ isLoading: true, error: null });
-        try {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          set({ 
-            mealPlans: mockMealPlans,
-            isLoading: false 
-          });
-          const progress: Record<string, DailyProgress> = {};
-          mockMealPlans.forEach((plan: MealPlan) => {
-            const totalMeals = Object.keys(plan.meals).length;
-            progress[plan.date] = {
-              date: plan.date,
-              targetMacros: plan.totalMacros,
-              consumedMacros: {
-                calories: 0,
-                protein: 0,
-                carbs: 0,
-                fat: 0
-              },
-              waterIntake: 0,
-              completedMeals: 0,
-              totalMeals
-            };
-          });
-          set({ dailyProgress: progress });
-        } catch (error) {
-          set({ 
-            error: error instanceof Error ? error.message : "Failed to fetch meal plans", 
-            isLoading: false 
-          });
-        }
-      },
-
-      generateMealPlan: async (date?: string) => {
-        set({ isLoading: true, error: null });
-        try {
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          const targetDate = date || new Date().toISOString().split('T')[0];
-          const newPlan: MealPlan = { ...mockMealPlans[0] };
-          newPlan.id = Date.now().toString();
-          newPlan.date = targetDate;
-          set((state: MealState) => ({ 
-            mealPlans: [...state.mealPlans.filter(p => p.date !== targetDate), newPlan],
-            isLoading: false 
-          }));
-          const totalMeals = Object.keys(newPlan.meals).length;
-          set((state: MealState) => ({
-            dailyProgress: {
-              ...state.dailyProgress,
-              [newPlan.date]: {
-                date: newPlan.date,
-                targetMacros: newPlan.totalMacros,
-                consumedMacros: {
-                  calories: 0,
-                  protein: 0,
-                  carbs: 0,
-                  fat: 0
-                },
-                waterIntake: 0,
-                completedMeals: 0,
-                totalMeals
-              }
-            }
-          }));
-        } catch (error) {
-          set({ 
-            error: error instanceof Error ? error.message : "Failed to generate meal plan", 
-            isLoading: false 
-          });
-        }
-      },
 
       generateAIMealPlan: async (date?: string) => {
         const state = get();
