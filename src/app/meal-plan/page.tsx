@@ -10,7 +10,6 @@ import { MealPlan, MealRecipe } from '../../types/meal';
 export default function MealPlanScreen() {
   const {
     mealPlans,
-    currentDate,
     generateAIMealPlan,
     isLoading,
     error

@@ -7,57 +7,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-interface DailyMealPlan {
-  breakfast: {
-    title: string;
-    ingredients: string[];
-    preparation: string[];
-    macros: {
-      calories: number;
-      protein: number;
-      carbs: number;
-      fat: number;
-    };
-    reasoning: string;
-  };
-  lunch: {
-    title: string;
-    ingredients: string[];
-    preparation: string[];
-    macros: {
-      calories: number;
-      protein: number;
-      carbs: number;
-      fat: number;
-    };
-    reasoning: string;
-  };
-  dinner: {
-    title: string;
-    ingredients: string[];
-    preparation: string[];
-    macros: {
-      calories: number;
-      protein: number;
-      carbs: number;
-      fat: number;
-    };
-    reasoning: string;
-  };
-  snack: {
-    title: string;
-    ingredients: string[];
-    preparation: string[];
-    macros: {
-      calories: number;
-      protein: number;
-      carbs: number;
-      fat: number;
-    };
-    reasoning: string;
-  };
-}
-
 export async function POST(request: NextRequest) {
   try {
     const { userGoal, dietPreferences, userMetrics } = await request.json();

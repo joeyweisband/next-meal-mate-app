@@ -1,5 +1,3 @@
-import Image from 'next/image';
-
 export interface DetailedMealCardProps {
   meal: {
     id: string;

@@ -14,13 +14,6 @@ interface AIMealData {
   reasoning: string;
 }
 
-interface DailyMealPlan {
-  breakfast: AIMealData;
-  lunch: AIMealData;
-  dinner: AIMealData;
-  snack: AIMealData;
-}
-
 export async function generateDailyMealPlan(
   userGoal?: unknown,
   dietPreferences?: unknown,
