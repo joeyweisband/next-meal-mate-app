@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import MealCard from '../../components/MealCard';
+import DetailedMealCard from '../../components/DetailedMealCard';
 import SelectedMealsSummary from '../../components/SelectedMealsSummary';
 import { useMealStore } from '../../store/meal-store';
 import { MealPlan, MealRecipe } from '../../types/meal';
@@ -18,6 +19,7 @@ export default function MealPlanScreen() {
   const today = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedMealIds, setSelectedMealIds] = useState<string[]>([]);
+  const [detailedMeal, setDetailedMeal] = useState<MealRecipe | null>(null);
   const selectedPlan = mealPlans.find((plan: MealPlan) => plan.date === selectedDate);
   
   // Get selected meals for summary
@@ -40,6 +42,14 @@ export default function MealPlanScreen() {
         ? prev.filter(id => id !== mealId)
         : [...prev, mealId]
     );
+  };
+
+  const handleMealDetailView = (meal: MealRecipe) => {
+    setDetailedMeal(meal);
+  };
+
+  const handleCloseDetailView = () => {
+    setDetailedMeal(null);
   };
 
   const handlePreviousDay = () => {
@@ -82,7 +92,8 @@ export default function MealPlanScreen() {
       minHeight: '100vh', 
       backgroundColor: '#f8f9fa',
       paddingBottom: '2rem'
-    }}>      {/* Header with date navigation */}
+    }}>
+      {/* Header with date navigation */}
       <div style={{ 
         display: 'flex', 
         alignItems: 'center', 
@@ -300,7 +311,8 @@ export default function MealPlanScreen() {
                 </div>
                 <div style={{ fontSize: '0.875rem', opacity: 0.9 }}>Fat</div>
               </div>
-            </div>          </Card>
+            </div>
+          </Card>
 
           {/* Regenerate Options */}
           <Card style={{ marginBottom: '1.5rem' }}>
@@ -392,38 +404,59 @@ export default function MealPlanScreen() {
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {selectedPlan?.meals?.breakfast?.id && (
-              <MealCard
-                meal={selectedPlan.meals.breakfast!}
-                mealType="breakfast"
-                onPress={() => handleMealPress(selectedPlan.meals.breakfast!.id)}
-                isSelected={selectedMealIds.includes(selectedPlan.meals.breakfast!.id)}
-              />
+              <div 
+                onClick={() => handleMealDetailView(selectedPlan.meals.breakfast!)}
+                style={{ cursor: 'pointer' }}
+              >
+                <MealCard
+                  meal={selectedPlan.meals.breakfast!}
+                  mealType="breakfast"
+                  onPress={() => handleMealPress(selectedPlan.meals.breakfast!.id)}
+                  isSelected={selectedMealIds.includes(selectedPlan.meals.breakfast!.id)}
+                />
+              </div>
             )}
             {selectedPlan?.meals?.lunch?.id && (
-              <MealCard
-                meal={selectedPlan.meals.lunch!}
-                mealType="lunch"
-                onPress={() => handleMealPress(selectedPlan.meals.lunch!.id)}
-                isSelected={selectedMealIds.includes(selectedPlan.meals.lunch!.id)}
-              />
+              <div 
+                onClick={() => handleMealDetailView(selectedPlan.meals.lunch!)}
+                style={{ cursor: 'pointer' }}
+              >
+                <MealCard
+                  meal={selectedPlan.meals.lunch!}
+                  mealType="lunch"
+                  onPress={() => handleMealPress(selectedPlan.meals.lunch!.id)}
+                  isSelected={selectedMealIds.includes(selectedPlan.meals.lunch!.id)}
+                />
+              </div>
             )}
             {selectedPlan?.meals?.dinner?.id && (
-              <MealCard
-                meal={selectedPlan.meals.dinner!}
-                mealType="dinner"
-                onPress={() => handleMealPress(selectedPlan.meals.dinner!.id)}
-                isSelected={selectedMealIds.includes(selectedPlan.meals.dinner!.id)}
-              />
+              <div 
+                onClick={() => handleMealDetailView(selectedPlan.meals.dinner!)}
+                style={{ cursor: 'pointer' }}
+              >
+                <MealCard
+                  meal={selectedPlan.meals.dinner!}
+                  mealType="dinner"
+                  onPress={() => handleMealPress(selectedPlan.meals.dinner!.id)}
+                  isSelected={selectedMealIds.includes(selectedPlan.meals.dinner!.id)}
+                />
+              </div>
             )}
             {Array.isArray(selectedPlan?.meals?.snacks) && selectedPlan.meals.snacks.map((snack: MealRecipe) => (
-              <MealCard
+              <div 
                 key={snack.id}
-                meal={snack}
-                mealType="snack"
-                onPress={() => handleMealPress(snack.id)}
-                isSelected={selectedMealIds.includes(snack.id)}
-              />
-            ))}          </div>
+                onClick={() => handleMealDetailView(snack)}
+                style={{ cursor: 'pointer' }}
+              >
+                <MealCard
+                  meal={snack}
+                  mealType="snack"
+                  onPress={() => handleMealPress(snack.id)}
+                  isSelected={selectedMealIds.includes(snack.id)}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
       
@@ -432,6 +465,11 @@ export default function MealPlanScreen() {
         meals={selectedMeals}
         onClearSelection={() => setSelectedMealIds([])}
       />
+
+      {/* Detailed meal card modal */}
+      {detailedMeal && (
+        <DetailedMealCard meal={detailedMeal} onClose={handleCloseDetailView} />
+      )}
     </div>
   );
 }
