@@ -4,7 +4,7 @@ import Card from '../../components/Card';
 import Button from '../../components/Button';
 import MealCard from '../../components/MealCard';
 import DetailedMealCard from '../../components/DetailedMealCard';
-import SelectedMealsSummary from '../../components/SelectedMealsSummary';
+// Removed SelectedMealsSummary import
 import { useMealStore } from '../../store/meal-store';
 import { MealPlan, MealRecipe } from '../../types/meal';
 
@@ -18,31 +18,16 @@ export default function MealPlanScreen() {
   // Always use today's date as the base
   const today = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(today);
-  const [selectedMealIds, setSelectedMealIds] = useState<string[]>([]);
+  // Removed selectedMealIds and selectedMeals state
   const [detailedMeal, setDetailedMeal] = useState<MealRecipe | null>(null);
   const selectedPlan = mealPlans.find((plan: MealPlan) => plan.date === selectedDate);
-  
-  // Get selected meals for summary
-  const selectedMeals = selectedPlan ? [
-    ...(selectedPlan.meals.breakfast && selectedMealIds.includes(selectedPlan.meals.breakfast.id) ? [selectedPlan.meals.breakfast] : []),
-    ...(selectedPlan.meals.lunch && selectedMealIds.includes(selectedPlan.meals.lunch.id) ? [selectedPlan.meals.lunch] : []),
-    ...(selectedPlan.meals.dinner && selectedMealIds.includes(selectedPlan.meals.dinner.id) ? [selectedPlan.meals.dinner] : []),
-    ...(selectedPlan.meals.snacks?.filter(snack => selectedMealIds.includes(snack.id)) || [])
-  ] : [];
 
   // If you want to force reset to today on mount (optional, but ensures consistency)
   useEffect(() => {
     setSelectedDate(today);
   }, [today]);
 
-  const handleMealPress = (mealId: string) => {
-    // Toggle selection
-    setSelectedMealIds(prev => 
-      prev.includes(mealId) 
-        ? prev.filter(id => id !== mealId)
-        : [...prev, mealId]
-    );
-  };
+  // Removed handleMealPress and setSelectedMealIds
 
   const handleMealDetailView = (meal: MealRecipe) => {
     setDetailedMeal(meal);
@@ -277,9 +262,7 @@ export default function MealPlanScreen() {
               }}>
                 Daily Nutrition
               </h3>
-              <div style={{ fontSize: '0.875rem', opacity: 0.9 }}>
-                {selectedMealIds.length > 0 ? `${selectedMealIds.length} meals selected` : 'Tap meals to select'}
-              </div>
+              {/* Removed selectedMealIds.length and selection text */}
             </div>
             
             <div style={{ 
@@ -355,41 +338,6 @@ export default function MealPlanScreen() {
             </div>
           </Card>
 
-          {/* Selection Actions */}
-          {selectedMealIds.length > 0 && (
-            <Card style={{ marginBottom: '1.5rem', background: '#e3f2fd', border: '1px solid #90caf9' }}>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center'
-              }}>
-                <div>
-                  <div style={{ fontWeight: '600', color: '#1565c0', marginBottom: '0.25rem' }}>
-                    {selectedMealIds.length} meal{selectedMealIds.length !== 1 ? 's' : ''} selected
-                  </div>
-                  <div style={{ fontSize: '0.875rem', color: '#1976d2' }}>
-                    View combined nutrition below
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedMealIds([])}
-                  style={{
-                    background: '#fff',
-                    color: '#1565c0',
-                    border: '1px solid #90caf9',
-                    borderRadius: '0.5rem',
-                    padding: '0.5rem 1rem',
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                  }}
-                >
-                  Clear Selection
-                </button>
-              </div>
-            </Card>
-          )}
-
           {/* Meals */}
           <div style={{ marginBottom: '1rem' }}>
             <h3 style={{ 
@@ -411,8 +359,7 @@ export default function MealPlanScreen() {
                 <MealCard
                   meal={selectedPlan.meals.breakfast!}
                   mealType="breakfast"
-                  onPress={() => handleMealPress(selectedPlan.meals.breakfast!.id)}
-                  isSelected={selectedMealIds.includes(selectedPlan.meals.breakfast!.id)}
+                  // Removed onPress and isSelected props
                 />
               </div>
             )}
@@ -424,8 +371,7 @@ export default function MealPlanScreen() {
                 <MealCard
                   meal={selectedPlan.meals.lunch!}
                   mealType="lunch"
-                  onPress={() => handleMealPress(selectedPlan.meals.lunch!.id)}
-                  isSelected={selectedMealIds.includes(selectedPlan.meals.lunch!.id)}
+                  // Removed onPress and isSelected props
                 />
               </div>
             )}
@@ -437,8 +383,7 @@ export default function MealPlanScreen() {
                 <MealCard
                   meal={selectedPlan.meals.dinner!}
                   mealType="dinner"
-                  onPress={() => handleMealPress(selectedPlan.meals.dinner!.id)}
-                  isSelected={selectedMealIds.includes(selectedPlan.meals.dinner!.id)}
+                  // Removed onPress and isSelected props
                 />
               </div>
             )}
@@ -451,21 +396,14 @@ export default function MealPlanScreen() {
                 <MealCard
                   meal={snack}
                   mealType="snack"
-                  onPress={() => handleMealPress(snack.id)}
-                  isSelected={selectedMealIds.includes(snack.id)}
+                  // Removed onPress and isSelected props
                 />
               </div>
             ))}
           </div>
         </div>
       )}
-      
-      {/* Selected meals summary */}
-      <SelectedMealsSummary 
-        meals={selectedMeals}
-        onClearSelection={() => setSelectedMealIds([])}
-      />
-
+      {/* Removed SelectedMealsSummary component */}
       {/* Detailed meal card modal */}
       {detailedMeal && (
         <DetailedMealCard meal={detailedMeal} onClose={handleCloseDetailView} />

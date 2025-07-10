@@ -6,8 +6,6 @@ interface MealCardProps {
   meal: MealRecipe;
   mealType: string;
   completed?: boolean;
-  isSelected?: boolean;
-  onPress: () => void;
   onMarkCompleted?: (completed: boolean) => void;
 }
 
@@ -15,28 +13,23 @@ const MealCard: React.FC<MealCardProps> = ({
   meal, 
   mealType, 
   completed = false, 
-  isSelected = false, 
-  onPress, 
   onMarkCompleted 
 }) => {
   const formattedMealType = mealType.charAt(0).toUpperCase() + mealType.slice(1);
   return (
     <div
       style={{
-        background: isSelected ? '#e3f2fd' : theme.colors.card,
+        background: theme.colors.card,
         borderRadius: theme.borderRadius.lg,
         overflow: "hidden",
         marginBottom: theme.spacing.md,
-        boxShadow: isSelected 
-          ? '0 4px 12px rgba(25, 118, 210, 0.15)' 
-          : theme.shadows.small.boxShadow,
+        boxShadow: theme.shadows.small.boxShadow,
         opacity: completed ? 0.7 : 1,
         cursor: "pointer",
-        border: isSelected ? '2px solid #1976d2' : '2px solid transparent',
+        border: '2px solid transparent',
         transition: 'all 0.2s ease-in-out',
-        transform: isSelected ? 'translateY(-2px)' : 'none'
+        transform: 'none'
       }}
-      onClick={onPress}
     >
       <div style={{ position: "relative", height: 150 }}>
         <img alt={meal.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -55,29 +48,13 @@ const MealCard: React.FC<MealCardProps> = ({
       <div style={{ padding: theme.spacing.md }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 4, color: isSelected ? '#1976d2' : 'inherit' }}>
+            <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 4 }}>
               {meal.name}
             </div>
             <div style={{ color: theme.colors.textSecondary, fontSize: 14, lineHeight: 1.4 }}>
               {meal.description}
             </div>
           </div>
-          {isSelected && (
-            <div style={{ 
-              background: '#1976d2', 
-              color: 'white', 
-              borderRadius: '50%', 
-              width: 24, 
-              height: 24, 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              fontSize: 14,
-              marginLeft: 8
-            }}>
-              ✓
-            </div>
-          )}
         </div>
         
         {/* Macro information */}
