@@ -16,15 +16,23 @@ export async function POST(request: NextRequest) {
     const dietDescription = getDietDescription(dietPreferences);
     const metricsDescription = getMetricsDescription(userMetrics);
     
-    const prompt = `You are an expert AI nutritionist. Generate a full day's meal plan (3 meals and 1 snack) that helps them achieve their weight goal.
+    const prompt = `You are an expert AI nutritionist with deep knowledge of global cuisines. Generate a CREATIVE and VARIED full day's meal plan (3 meals and 1 snack) that helps them achieve their weight goal.
 
 User Profile:
 ${metricsDescription}
 Goal: ${goalDescription}
 Diet Preferences: ${dietDescription}
 
+Important guidelines:
+- Each meal should feature a DIFFERENT cuisine or cooking style
+- Use unusual ingredient combinations while maintaining palatability
+- Vary cooking methods across meals (baking, sautéing, steaming, etc.)
+- Include at least one unexpected or trendy ingredient in each meal
+- Balance familiar comfort foods with adventurous options
+- Every set of meals per day should be distinct and not repeat previous suggestions
+
 For each meal, include:
-- Meal Title
+- Creative Meal Title
 - Ingredients (as an array of strings)
 - Preparation Steps (as an array of simple and clear steps)
 - Macros: Calories, Protein (g), Carbs (g), Fat (g)
@@ -44,34 +52,122 @@ Return the response as a JSON object with the following structure:
   "snack": { ... }
 }
 
-Make sure the macros add up to appropriate daily totals for the user's goal and the meals are practical to prepare.`;
+Make sure the macros add up to appropriate daily totals for the user's goal and the meals are practical to prepare.
+IMPORTANT: Return ONLY valid JSON. Use double quotes for all keys and string values. Ensure your response is properly formatted and can be directly parsed using JSON.parse().`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-3.5-turbo-0125",
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.9,
+      functions: [
+        {
+          name: "generateMealPlan",
+          description: "Generate a meal plan based on user requirements",
+          parameters: {
+            type: "object",
+            properties: {
+              breakfast: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  ingredients: { type: "array", items: { type: "string" } },
+                  preparation: { type: "array", items: { type: "string" } },
+                  macros: { 
+                    type: "object", 
+                    properties: {
+                      calories: { type: "number" },
+                      protein: { type: "number" },
+                      carbs: { type: "number" },
+                      fat: { type: "number" }
+                    },
+                    required: ["calories", "protein", "carbs", "fat"]
+                  },
+                  reasoning: { type: "string" }
+                },
+                required: ["title", "ingredients", "preparation", "macros", "reasoning"]
+              },
+              lunch: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  ingredients: { type: "array", items: { type: "string" } },
+                  preparation: { type: "array", items: { type: "string" } },
+                  macros: { 
+                    type: "object", 
+                    properties: {
+                      calories: { type: "number" },
+                      protein: { type: "number" },
+                      carbs: { type: "number" },
+                      fat: { type: "number" }
+                    },
+                    required: ["calories", "protein", "carbs", "fat"]
+                  },
+                  reasoning: { type: "string" }
+                },
+                required: ["title", "ingredients", "preparation", "macros", "reasoning"]
+              },
+              dinner: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  ingredients: { type: "array", items: { type: "string" } },
+                  preparation: { type: "array", items: { type: "string" } },
+                  macros: { 
+                    type: "object", 
+                    properties: {
+                      calories: { type: "number" },
+                      protein: { type: "number" },
+                      carbs: { type: "number" },
+                      fat: { type: "number" }
+                    },
+                    required: ["calories", "protein", "carbs", "fat"]
+                  },
+                  reasoning: { type: "string" }
+                },
+                required: ["title", "ingredients", "preparation", "macros", "reasoning"]
+              },
+              snack: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  ingredients: { type: "array", items: { type: "string" } },
+                  preparation: { type: "array", items: { type: "string" } },
+                  macros: { 
+                    type: "object", 
+                    properties: {
+                      calories: { type: "number" },
+                      protein: { type: "number" },
+                      carbs: { type: "number" },
+                      fat: { type: "number" }
+                    },
+                    required: ["calories", "protein", "carbs", "fat"]
+                  },
+                  reasoning: { type: "string" }
+                },
+                required: ["title", "ingredients", "preparation", "macros", "reasoning"]
+              }
+            },
+            required: ["breakfast", "lunch", "dinner", "snack"]
+          }
+        }
+      ],
+      function_call: { name: "generateMealPlan" }
     });
 
     console.log('OpenAI API response:', completion); // <-- Add this
 
-    const mealPlanText = completion.choices[0].message.content;
-    console.log('Meal plan text:', mealPlanText); // <-- Add this
-    
-    if (!mealPlanText) {
-      throw new Error('No content received from OpenAI');
-    }
-    
-    // Parse the JSON response
+    // Parse the function call args
+    const functionCall = completion.choices[0].message.function_call;
     let mealPlan: APIMealPlan;
-    try {
-      mealPlan = JSON.parse(mealPlanText);
-    } catch {
-      console.error('Failed to parse OpenAI response:', mealPlanText);
-      throw new Error('Invalid JSON response from OpenAI');
+    if (functionCall && functionCall.name === "generateMealPlan") {
+      try {
+        mealPlan = JSON.parse(functionCall.arguments);
+      } catch (error) {
+        console.error('Failed to parse function arguments:', error);
+        throw new Error('Invalid function response from OpenAI');
+      }
+    } else {
+      throw new Error('No valid function call received from OpenAI');
     }
-
-    // Optionally: Validate mealPlan here (runtime check)
-    // You can use zod or ajv for runtime validation if desired
 
     const response: APIMealPlanResponse = { mealPlan };
     return NextResponse.json(response);
