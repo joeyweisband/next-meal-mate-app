@@ -1,16 +1,23 @@
-import type { NextConfig } from "next";
+import WithPWA from "next-pwa";
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
+        protocol: 'https' as const,
         hostname: 'images.unsplash.com',
-        port: '',
+        port: undefined,
         pathname: '/**',
       },
     ],
   },
 };
 
-export default nextConfig;
+const pwaConfig = {
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+};
+
+export default WithPWA(pwaConfig)(nextConfig);
