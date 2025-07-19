@@ -1,4 +1,3 @@
-"use client";
 import { Metadata } from "next";
 import { ClerkProvider, useUser } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
