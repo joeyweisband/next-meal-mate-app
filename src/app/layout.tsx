@@ -1,7 +1,31 @@
 "use client";
+import { Metadata } from "next";
 import { ClerkProvider, useUser } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+
+export const metadata: Metadata = {
+  metadataBase: new URL("https://clerk-next-app.vercel.app/"),
+  title: "Meal Mate",
+  description:
+    "Personalized meal planning app.",
+  // Add these lines for iOS homescreen icons
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180' }
+    ]
+  },
+  appleWebApp: {
+    title: 'Meal Mate',
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    startupImage: [],
+  },
+  applicationName: "Meal Mate",
+};
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
