@@ -1,30 +1,7 @@
-import { Metadata } from "next";
+"use client";
 import { ClerkProvider, useUser } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-export const metadata: Metadata = {
-  metadataBase: new URL("https://clerk-next-app.vercel.app/"),
-  title: "Meal Mate",
-  description:
-    "Personalized meal planning app.",
-  // Add these lines for iOS homescreen icons
-  icons: {
-    icon: [
-      { url: '/favicon.ico' },
-    ],
-    apple: [
-      { url: '/apple-icon.png', sizes: '180x180' }
-    ]
-  },
-  appleWebApp: {
-    title: 'Meal Mate',
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    startupImage: [],
-  },
-  applicationName: "Meal Mate",
-};
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -111,7 +88,16 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Meal Mate" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        {/* Add multiple apple-touch-icon sizes for iOS PWA support */}
+        <link rel="apple-touch-icon" sizes="180x180" href="/web-app-manifest-192x192.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/web-app-manifest-192x192.png" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/web-app-manifest-192x192.png" />
+        <link rel="apple-touch-icon" sizes="120x120" href="/web-app-manifest-192x192.png" />
+        {/* Fallback icon for older iOS devices */}
+        <link rel="apple-touch-icon" href="/web-app-manifest-192x192.png" />
+        {/* Add maskable icon for Android/Chrome PWA */}
+        <link rel="icon" type="image/png" sizes="192x192" href="/web-app-manifest-192x192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/web-app-manifest-512x512.png" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ClerkProvider>
