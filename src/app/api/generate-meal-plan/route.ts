@@ -16,47 +16,88 @@ export async function POST(request: NextRequest) {
     const dietDescription = getDietDescription(dietPreferences);
     const metricsDescription = getMetricsDescription(userMetrics);
     
-    const prompt = `You are an expert AI nutritionist with deep knowledge of global cuisines. Generate a CREATIVE and VARIED full day's meal plan (3 meals and 1 snack) that helps them achieve their weight goal.
+    const prompt = `You are an expert AI nutritionist and practical meal planner. Your job is to create a full day’s worth of realistic, varied, and goal-aligned meals for a typical home user who wants to eat healthy and stay consistent.
 
 User Profile:
 ${metricsDescription}
-Goal: ${goalDescription}
-Diet Preferences: ${dietDescription}
+Goal:
+${goalDescription}
+Diet Preferences:
+${dietDescription}
 
-Important guidelines:
-- Each meal should feature a DIFFERENT cuisine or cooking style
-- Use unusual ingredient combinations while maintaining palatability
-- Vary cooking methods across meals (baking, sautéing, steaming, etc.)
-- Include at least one unexpected or trendy ingredient in each meal
-- Balance familiar comfort foods with adventurous options
-- Every set of meals per day should be distinct and not repeat previous suggestions
+Your task:
+Generate 3 meals (breakfast, lunch, dinner) and 1 snack that:
+- Help the user reach their health and fitness goal
+- Use familiar, everyday ingredients with **exact quantities and units**
+- Are easy to cook using common kitchen equipment
+- Vary in ingredients, flavors, and cooking techniques
 
-For each meal, include:
-- Creative Meal Title
-- Ingredients (as an array of strings)
-- Preparation Steps (as an array of simple and clear steps)
-- Macros: Calories, Protein (g), Carbs (g), Fat (g)
-- One-sentence reasoning why the meal supports the user's goal
+Meal Design Requirements:
+- Prioritize **simple, accessible, and recognizable meals** (e.g., grilled chicken bowl, turkey wrap, scrambled eggs with toast)
+- Add occasional creativity or flair (e.g., using Greek yogurt for sauces, adding herbs, swapping rice for quinoa) — but only if practical
+- Avoid hard-to-find or highly exotic ingredients (no niche global meals unless it’s a common variation in American kitchens)
+- Do not repeat the same ingredient more than twice in a day (e.g., don’t use chicken in all meals)
+- Vary the cooking methods (e.g., don’t bake every meal)
+- Do not generate meals that resemble each other in structure (e.g., don’t generate three rice bowls)
+- Do not reuse meals or variations that are too similar to previous suggestions
+- Ensure meals are prep-friendly and can be made in under ~30 minutes (unless clearly stated otherwise)
 
-Return the response as a JSON object with the following structure:
+Ingredients:
+- Include a list of ingredients for each meal as an array of strings
+- **Each ingredient must include a specific amount and unit**, like:
+  - "150g chicken breast"
+  - "1 tbsp olive oil"
+  - "1 slice whole grain bread"
+- Avoid listing just “chicken” or “rice” without amounts
+
+Macros:
+- Macros must match the user’s dietary goal across the day
+- Ensure each meal contains accurate estimates for:
+  - Calories
+  - Protein (grams)
+  - Carbohydrates (grams)
+  - Fat (grams)
+
+Return Format:
+Respond ONLY with a valid JSON object that can be parsed by \`JSON.parse()\`.
+
+Structure:
+
 {
   "breakfast": {
-    "title": "...",
-    "ingredients": ["...", "..."],
-    "preparation": ["...", "..."],
-    "macros": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0},
-    "reasoning": "..."
+    "title": "Scrambled Eggs on Toast with Avocado",
+    "ingredients": [
+      "2 eggs",
+      "1 slice whole grain bread",
+      "50g avocado",
+      "1 tsp olive oil"
+    ],
+    "preparation": [
+      "Crack the eggs into a bowl and beat well.",
+      "Heat olive oil in a non-stick pan and scramble the eggs.",
+      "Toast the bread slice.",
+      "Top the toast with eggs and sliced avocado."
+    ],
+    "macros": {
+      "calories": 350,
+      "protein": 18,
+      "carbs": 20,
+      "fat": 22
+    },
+    "reasoning": "This meal provides healthy fats and protein to start the day, keeping the user full and energized."
   },
   "lunch": { ... },
   "dinner": { ... },
   "snack": { ... }
 }
 
-Make sure the macros add up to appropriate daily totals for the user's goal and the meals are practical to prepare.
-IMPORTANT: Return ONLY valid JSON. Use double quotes for all keys and string values. Ensure your response is properly formatted and can be directly parsed using JSON.parse().`;
+Important:
+- Format strictly in JSON with **double quotes** on all keys and strings
+- Do not include any text outside the JSON block
+- Meals should be balanced, realistic, and achievable`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo-0125",
+      model: "gpt-4.1-2025-04-14",
       messages: [{ role: "user", content: prompt }],
       functions: [
         {
