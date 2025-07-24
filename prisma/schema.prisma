@@ -1,0 +1,44 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                   String     @id
+  name                 String
+  email                String
+  feet                 Int?
+  inches               Int?
+  weight               Float?
+  age                  Int?
+  gender               String?
+  activity_level       String?
+  goal_type            String[]   @default([])
+  target_weight        Float?
+  timeframe            Int?
+  diet_type            String[]   @default([])
+  allergies            String[]   @default([])
+  custom_restrictions  String?
+  onboarding_completed Boolean    @default(false)
+  MealPlan             MealPlan[]
+}
+
+model MealPlan {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  createdAt      DateTime @default(now())
+  breakfast_name String
+  lunch_name     String
+  dinner_name    String
+  snack_name     String
+}
