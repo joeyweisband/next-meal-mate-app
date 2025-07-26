@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         });
         
         // Extract meal names
-        previousMeals = pastMealPlans.flatMap(plan => [
+        previousMeals = pastMealPlans.flatMap((plan: { breakfast_name: any; lunch_name: any; dinner_name: any; snack_name: any; }) => [
           plan.breakfast_name,
           plan.lunch_name,
           plan.dinner_name,
