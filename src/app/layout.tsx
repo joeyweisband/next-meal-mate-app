@@ -1,6 +1,7 @@
 "use client";
 import { ClerkProvider, useUser } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
+import { useEffect } from "react";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,7 +15,41 @@ const geistMono = Geist_Mono({
 });
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded, user } = useUser();
+  
+  // Create user in database when signed in
+  useEffect(() => {
+    const createUserInDatabase = async () => {
+      if (isSignedIn && user) {
+        console.log("Layout - Creating user in database:", user.id);
+        try {
+          // Store user ID in localStorage for API calls
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('clerk-db-user-id', user.id);
+          }
+          
+          const response = await fetch('/api/test-create-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: user.id,
+              name: user.fullName || user.username || 'New User',
+              email: user.emailAddresses[0]?.emailAddress || '',
+            }),
+          });
+          
+          const result = await response.json();
+          console.log("Layout - User creation result:", result);
+        } catch (error) {
+          console.error("Layout - Error creating user:", error);
+        }
+      }
+    };
+    
+    createUserInDatabase();
+  }, [isSignedIn, user]);
 
   // Show loading state while Clerk is initializing
   if (!isLoaded) {

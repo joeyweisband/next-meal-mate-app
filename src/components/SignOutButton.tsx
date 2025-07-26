@@ -9,6 +9,11 @@ const SignOutButton: React.FC<{ afterSignOutUrl?: string }> = ({ afterSignOutUrl
 
   const handleSignOut = async () => {
     try {
+      // Clear user ID from localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('clerk-db-user-id');
+      }
+      
       await signOut()
       router.push(afterSignOutUrl)
     } catch (error) {

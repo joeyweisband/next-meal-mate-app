@@ -30,6 +30,7 @@ model User {
   custom_restrictions  String?
   onboarding_completed Boolean    @default(false)
   MealPlan             MealPlan[]
+  clerkId              String     @unique
 }
 
 model MealPlan {

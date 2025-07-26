@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import type { APIMealPlan, APIMealPlanResponse } from '../../schemas/api-meal';
+import { getAuth } from '@clerk/nextjs/server';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -11,12 +12,75 @@ export async function POST(request: NextRequest) {
   try {
     const { userGoal, dietPreferences, userMetrics } = await request.json();
     
+    // Get the current user ID from the auth context
+    const auth = request.headers.get('Authorization');
+    let userId = '';
+    
+    // Try to get user ID from Clerk auth first (for server-side)
+    const { userId: clerkUserId } = getAuth(request);
+    if (clerkUserId) {
+      userId = clerkUserId;
+    }
+    // Fallback to the auth header if provided (for client-side)
+    else if (auth && auth.startsWith('Bearer ')) {
+      // Extract user ID from auth token
+      const token = auth.split(' ')[1];
+      if (token && token !== 'undefined' && token !== 'null') {
+        userId = token;
+      }
+    }
+
+    // Get previous meal plans from the last 7 days
+    let previousMeals: any[] = [];
+    if (userId) {
+      try {
+        // Import prisma client
+        const { prisma } = await import('@/utils/prisma-db');
+        
+        // Fetch meal plans from the last 7 days
+        const pastMealPlans = await prisma.mealPlan.findMany({
+          where: {
+            userId: userId,
+            createdAt: {
+              gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7 days ago
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        });
+        
+        // Extract meal names
+        previousMeals = pastMealPlans.flatMap(plan => [
+          plan.breakfast_name,
+          plan.lunch_name,
+          plan.dinner_name,
+          plan.snack_name
+        ]);
+        
+        console.log('Previous meals from the last 7 days:', previousMeals);
+      } catch (dbError) {
+        console.error('Failed to fetch previous meal plans:', dbError);
+        // Continue even if DB fetch fails
+      }
+    }
+    
     // Construct the prompt based on user data
     const goalDescription = getGoalDescription(userGoal);
     const dietDescription = getDietDescription(dietPreferences);
     const metricsDescription = getMetricsDescription(userMetrics);
     
-    const prompt = `You are an expert AI nutritionist and practical meal planner. Your job is to create a full day’s worth of realistic, varied, and goal-aligned meals for a typical home user who wants to eat healthy and stay consistent.
+    // Add previously suggested meals to avoid repetition
+    let previousMealsSection = '';
+    if (previousMeals.length > 0) {
+      previousMealsSection = `
+Previously Suggested Meals (DO NOT SUGGEST AGAIN):
+${previousMeals.join(', ')}
+
+`;
+    }
+    
+    const prompt = `You are an expert AI nutritionist and practical meal planner. Your job is to create a full day's worth of realistic, varied, and goal-aligned meals for a typical home user who wants to eat healthy and stay consistent.
 
 User Profile:
 ${metricsDescription}
@@ -24,21 +88,22 @@ Goal:
 ${goalDescription}
 Diet Preferences:
 ${dietDescription}
-
+${previousMealsSection}
 Your task:
 Generate 3 meals (breakfast, lunch, dinner) and 1 snack that:
 - Help the user reach their health and fitness goal
 - Use familiar, everyday ingredients with **exact quantities and units**
 - Are easy to cook using common kitchen equipment
 - Vary in ingredients, flavors, and cooking techniques
+- Are completely different from any previously suggested meals listed above
 
 Meal Design Requirements:
 - Prioritize **simple, accessible, and recognizable meals** (e.g., grilled chicken bowl, turkey wrap, scrambled eggs with toast)
 - Add occasional creativity or flair (e.g., using Greek yogurt for sauces, adding herbs, swapping rice for quinoa) — but only if practical
-- Avoid hard-to-find or highly exotic ingredients (no niche global meals unless it’s a common variation in American kitchens)
-- Do not repeat the same ingredient more than twice in a day (e.g., don’t use chicken in all meals)
-- Vary the cooking methods (e.g., don’t bake every meal)
-- Do not generate meals that resemble each other in structure (e.g., don’t generate three rice bowls)
+- Avoid hard-to-find or highly exotic ingredients (no niche global meals unless it's a common variation in American kitchens)
+- Do not repeat the same ingredient more than twice in a day (e.g., don't use chicken in all meals)
+- Vary the cooking methods (e.g., don't bake every meal)
+- Do not generate meals that resemble each other in structure (e.g., don't generate three rice bowls)
 - Do not reuse meals or variations that are too similar to previous suggestions
 - Ensure meals are prep-friendly and can be made in under ~30 minutes (unless clearly stated otherwise)
 
@@ -48,10 +113,10 @@ Ingredients:
   - "150g chicken breast"
   - "1 tbsp olive oil"
   - "1 slice whole grain bread"
-- Avoid listing just “chicken” or “rice” without amounts
+- Avoid listing just "chicken" or "rice" without amounts
 
 Macros:
-- Macros must match the user’s dietary goal across the day
+- Macros must match the user's dietary goal across the day
 - Ensure each meal contains accurate estimates for:
   - Calories
   - Protein (grams)
@@ -208,6 +273,30 @@ Important:
       }
     } else {
       throw new Error('No valid function call received from OpenAI');
+    }
+
+    // If we have a user ID, save the meal plan to the database
+    if (userId) {
+      try {
+        // Import prisma client
+        const { prisma } = await import('@/utils/prisma-db');
+        
+        // Save meal plan to the database
+        await prisma.mealPlan.create({
+          data: {
+            userId: userId,
+            breakfast_name: mealPlan.breakfast.title,
+            lunch_name: mealPlan.lunch.title,
+            dinner_name: mealPlan.dinner.title,
+            snack_name: mealPlan.snack.title
+          }
+        });
+        
+        console.log('Meal plan saved to database for user:', userId);
+      } catch (dbError) {
+        console.error('Failed to save meal plan to database:', dbError);
+        // We'll continue even if saving to DB fails
+      }
     }
 
     const response: APIMealPlanResponse = { mealPlan };
