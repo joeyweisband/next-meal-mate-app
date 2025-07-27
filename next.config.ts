@@ -11,6 +11,26 @@ const nextConfig = {
       },
     ],
   },
+  
+  // More targeted solution for Next.js 13+
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client', '@prisma/engines'],
+  },
+  
+  webpack: (config: any, { isServer }: { isServer: boolean }) => {
+    if (isServer) {
+      config.externals = [...(config.externals || []), '@prisma/client', '@prisma/engines'];
+    }
+    
+    // Add rule to handle Prisma generated files
+    config.module.rules.push({
+      test: /\.js$/,
+      include: /src\/generated\/prisma/,
+      use: 'null-loader',
+    });
+    
+    return config;
+  },
 };
 
 const pwaConfig = {
