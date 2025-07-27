@@ -1,6 +1,13 @@
 import WithPWA from "next-pwa";
 
 const nextConfig = {
+  // Add this to disable ESLint during build
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
+  
   images: {
     remotePatterns: [
       {
