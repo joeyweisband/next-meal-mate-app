@@ -1,0 +1,5 @@
+// filepath: c:\Users\student\projects\next-meal-mate-app\.eslintignore
+# Ignore all generated Prisma files
+**/generated/**
+src/generated/**
+prisma/generated/**
