@@ -22,11 +22,14 @@ const nextConfig = {
       config.externals = [...(config.externals || []), '@prisma/client', '@prisma/engines'];
     }
     
-    // Add rule to handle Prisma generated files
+    // Replace null-loader with this approach
     config.module.rules.push({
       test: /\.js$/,
       include: /src\/generated\/prisma/,
-      use: 'null-loader',
+      type: 'javascript/auto',
+      resolve: {
+        fullySpecified: false,
+      },
     });
     
     return config;
