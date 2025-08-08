@@ -1,0 +1,11 @@
+/* Add this to your global CSS */
+@media (max-width: 768px) {
+  .meal-card-text {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+    font-weight: 700;
+  }
+  
+  .meal-card-overlay {
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.4) 100%);
+  }
+}
