@@ -1,6 +1,7 @@
 import React from "react";
 import { theme } from "@/constants/theme";
 import { MealRecipe } from "../types/meal";
+import Image from "next/image";
 
 interface MealCardProps {
   meal: MealRecipe;
@@ -16,6 +17,10 @@ const MealCard: React.FC<MealCardProps> = ({
   onMarkCompleted 
 }) => {
   const formattedMealType = mealType.charAt(0).toUpperCase() + mealType.slice(1);
+  
+  // Add a placeholder image URL to use if the meal doesn't have an image
+  const placeholderImage = `/images/meal-placeholder-${mealType}.jpg`;
+  
   return (
     <div
       style={{
@@ -32,7 +37,34 @@ const MealCard: React.FC<MealCardProps> = ({
       }}
     >
       <div style={{ position: "relative", height: 150 }}>
-        <img alt={meal.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        {meal.imageUrl ? (
+          <img 
+            src={meal.imageUrl} 
+            alt={meal.name} 
+            style={{ 
+              width: "100%", 
+              height: "100%", 
+              objectFit: "cover" 
+            }} 
+            onError={(e) => {
+              // If image fails to load, replace with placeholder
+              (e.target as HTMLImageElement).src = placeholderImage;
+            }}
+          />
+        ) : (
+          <div 
+            style={{ 
+              width: "100%", 
+              height: "100%", 
+              backgroundColor: "#f0f0f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}
+          >
+            <span style={{ fontSize: "2rem" }}>🍽️</span>
+          </div>
+        )}
         <div style={{
           position: "absolute",
           top: theme.spacing.sm,

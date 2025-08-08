@@ -2,6 +2,7 @@ import { MealPlan, MealRecipe } from '../types/meal';
 import type { APIMealPlanResponse } from '../app/schemas/api-meal';
 
 interface AIMealData {
+  imageUrl?: string;
   title: string;
   ingredients: string[];
   preparation: string[];
@@ -59,7 +60,7 @@ export async function generateDailyMealPlan(
       id: `${mealType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: aiMeal.title,
       description: aiMeal.reasoning,
-      // imageUrl: `/meal-placeholder.svg`, // You can add meal image generation later
+      imageUrl: aiMeal.imageUrl || '/meal-placeholder.svg', // Use the generated image or fallback
       prepTime: 15, // Default prep time
       cookTime: 20, // Default cook time
       servings: 1,

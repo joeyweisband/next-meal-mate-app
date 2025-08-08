@@ -10,14 +10,16 @@ export default function DetailedMealCard({ meal, onClose }: DetailedMealCardProp
   const getMealTypeColor = (name: string) => {
     if (name.toLowerCase().includes('breakfast')) return 'bg-orange-500';
     if (name.toLowerCase().includes('lunch')) return 'bg-green-500';
-    if (name.toLowerCase().includes('dinner')) return 'bg-blue-500';
+    if (name.toLowerCase().includes('dinner')) return 'bg-blue-600';
     if (name.toLowerCase().includes('snack')) return 'bg-purple-500';
     return 'bg-gray-500';
   };
 
+  const placeholderImage = "/images/meal-placeholder.jpg";
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 modal-overlay">
+      <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto modal-content">
         {/* Close button */}
         <button 
           onClick={onClose}
@@ -26,14 +28,33 @@ export default function DetailedMealCard({ meal, onClose }: DetailedMealCardProp
           ✕
         </button>
         
-        {/* Meal header */}
-        <div className="h-40 bg-gradient-to-r from-blue-500 to-purple-600 rounded-t-2xl flex items-end p-6 relative">
+        {/* Meal image header - Replace gradient with actual image */}
+        <div className="h-64 relative rounded-t-2xl overflow-hidden">
+          {meal.imageUrl ? (
+            <img 
+              src={meal.imageUrl} 
+              alt={meal.name} 
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = placeholderImage;
+              }}
+            />
+          ) : (
+            <div className="h-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+              <span className="text-5xl">🍽️</span>
+            </div>
+          )}
+          
+          {/* Overlay for better text readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+          
           <div className={`absolute top-4 left-4 ${getMealTypeColor(meal.name)} text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg`}>
             {meal.name.toLowerCase().includes('breakfast') ? '🌅 Breakfast' : 
              meal.name.toLowerCase().includes('lunch') ? '☀️ Lunch' : 
              meal.name.toLowerCase().includes('dinner') ? '🌙 Dinner' : '🍎 Snack'}
           </div>
-          <div className="text-white">
+          
+          <div className="absolute bottom-4 left-6 text-white">
             <h1 className="text-2xl font-bold">{meal.name}</h1>
             <p className="text-white/80 text-sm mt-1">{meal.prepTime + meal.cookTime} minutes to prepare</p>
           </div>

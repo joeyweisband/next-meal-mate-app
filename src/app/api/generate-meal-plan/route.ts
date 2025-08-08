@@ -299,7 +299,10 @@ Important:
       }
     }
 
-    const response: APIMealPlanResponse = { mealPlan };
+    // Generate images for each meal
+    const mealPlanWithImages = await generateImagesForMeals(mealPlan);
+
+    const response: APIMealPlanResponse = { mealPlan: mealPlanWithImages };
     return NextResponse.json(response);
   } catch (error) {
     console.error('Error generating meal plan:', error);
@@ -307,6 +310,46 @@ Important:
       { error: 'Failed to generate meal plan' },
       { status: 500 }
     );
+  }
+}
+
+// New function to generate images
+async function generateImagesForMeals(mealPlan: APIMealPlan): Promise<APIMealPlan> {
+  try {
+    // Create a copy of the meal plan to avoid modifying the original
+    const mealPlanWithImages = { ...mealPlan };
+    
+    // Generate images for each meal type
+    const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+    
+    for (const mealType of mealTypes) {
+      try {
+        const meal = mealPlanWithImages[mealType];
+        const imagePrompt = `A professional food photography style image of ${meal.title}, showing a delicious homemade meal on a plate. Top-down view, natural lighting, no text, no watermarks.`;
+        
+        const response = await openai.images.generate({
+          model: "dall-e-3",
+          prompt: imagePrompt,
+          n: 1,
+          size: "1024x1024",
+          quality: "standard",
+        });
+        
+        const imageUrl = response.data && response.data[0]?.url;
+        if (imageUrl) {
+          mealPlanWithImages[mealType].imageUrl = imageUrl;
+        }
+      } catch (imageError) {
+        console.error(`Failed to generate image for ${mealType}:`, imageError);
+        // Continue with other meals if one fails
+      }
+    }
+    
+    return mealPlanWithImages;
+  } catch (error) {
+    console.error('Error generating meal images:', error);
+    // Return original meal plan if image generation fails
+    return mealPlan;
   }
 }
 

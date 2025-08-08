@@ -10,6 +10,7 @@ export interface APIMeal {
     fat: number;
   };
   reasoning: string;
+  imageUrl?: string; // New field for the generated image
 }
 
 // JSON schema for the full day's meal plan (matches OpenAI prompt)
