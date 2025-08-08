@@ -46,7 +46,7 @@ export default function DetailedMealCard({ meal, onClose }: DetailedMealCardProp
           )}
           
           {/* Overlay for better text readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-black/40"></div>
           
           <div className={`absolute top-4 left-4 ${getMealTypeColor(meal.name)} text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg`}>
             {meal.name.toLowerCase().includes('breakfast') ? '🌅 Breakfast' : 
@@ -55,8 +55,8 @@ export default function DetailedMealCard({ meal, onClose }: DetailedMealCardProp
           </div>
           
           <div className="absolute bottom-4 left-6 text-white">
-            <h1 className="text-2xl font-bold">{meal.name}</h1>
-            <p className="text-white/80 text-sm mt-1">{meal.prepTime + meal.cookTime} minutes to prepare</p>
+            <h1 className="text-2xl font-bold text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{meal.name}</h1>
+            <p className="text-white text-sm mt-1 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">{meal.prepTime + meal.cookTime} minutes to prepare</p>
           </div>
         </div>
         
