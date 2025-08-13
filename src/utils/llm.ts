@@ -21,23 +21,10 @@ export async function generateDailyMealPlan(
   userMetrics?: unknown
 ): Promise<MealPlan> {
   try {
-    // Get user ID from clerk-js
-    let userId = '';
-    
-    // Check if window exists (client-side only)
-    if (typeof window !== 'undefined') {
-      // Get Clerk user token
-      const token = localStorage.getItem('clerk-db-user-id');
-      if (token) {
-        userId = token;
-      }
-    }
-    
     const response = await fetch('/api/generate-meal-plan', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${userId}`, // Add user ID to Authorization header
       },
       body: JSON.stringify({
         userGoal,

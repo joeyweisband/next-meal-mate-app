@@ -42,9 +42,9 @@ export default function RedirectAfterSignUp() {
       try {
         const userResponse = await axios.get('/api/user');
         console.log('User data response:', userResponse.data);
-        const userData = userResponse.data;
+        const existingUserData = userResponse.data;
         
-        if (userData.onboardingCompleted) {
+        if (existingUserData.onboardingCompleted) {
           // User has already completed onboarding, redirect to meal-plan
           router.push('/meal-plan');
         } else {
@@ -52,7 +52,7 @@ export default function RedirectAfterSignUp() {
           router.push('/user-info');
         }
       } catch (error) {
-        // If there's an error, just redirect to user-info to complete profile
+        // If there's an error getting user data, redirect to user-info to complete profile
         console.error('Error checking user data:', error);
         router.push('/user-info');
       }

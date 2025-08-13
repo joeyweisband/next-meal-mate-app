@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import type { APIMealPlan, APIMealPlanResponse } from '../../schemas/api-meal';
 import { getAuth } from '@clerk/nextjs/server';
+import prisma, { initializeDatabase } from '@/utils/prisma-db';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -10,65 +11,83 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const { userGoal, dietPreferences, userMetrics } = await request.json();
+    await initializeDatabase();
     
-    // Get the current user ID from the auth context
-    const auth = request.headers.get('Authorization');
-    let userId = '';
+    const { userId } = getAuth(request);
     
-    // Try to get user ID from Clerk auth first (for server-side)
-    const { userId: clerkUserId } = getAuth(request);
-    if (clerkUserId) {
-      userId = clerkUserId;
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    // Fallback to the auth header if provided (for client-side)
-    else if (auth && auth.startsWith('Bearer ')) {
-      // Extract user ID from auth token
-      const token = auth.split(' ')[1];
-      if (token && token !== 'undefined' && token !== 'null') {
-        userId = token;
-      }
+
+    const data = await request.json();
+    const selectedDate = data.date || new Date().toISOString().split('T')[0];
+    
+    console.log("Meal Plan API - Generating meal plan for date:", selectedDate);
+    console.log("Meal Plan API - User ID:", userId);
+
+    // Get user data from database to include in meal generation
+    let userData = null;
+    try {
+      userData = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+      console.log("Meal Plan API - User data found:", userData ? 'Yes' : 'No');
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      // Continue without user data if there's an error
     }
 
     // Get previous meal plans from the last 7 days
     let previousMeals: any[] = [];
-    if (userId) {
-      try {
-        // Import prisma client
-        const { prisma } = await import('@/utils/prisma-db');
-        
-        // Fetch meal plans from the last 7 days
-        const pastMealPlans = await prisma.mealPlan.findMany({
-          where: {
-            userId: userId,
-            createdAt: {
-              gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7 days ago
-            }
-          },
-          orderBy: {
-            createdAt: 'desc'
+    try {
+      // Fetch meal plans from the last 7 days
+      const pastMealPlans = await prisma.mealPlan.findMany({
+        where: {
+          userId: userId,
+          createdAt: {
+            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7 days ago
           }
-        });
-        
-        // Extract meal names
-        previousMeals = pastMealPlans.flatMap((plan: { breakfast_name: any; lunch_name: any; dinner_name: any; snack_name: any; }) => [
-          plan.breakfast_name,
-          plan.lunch_name,
-          plan.dinner_name,
-          plan.snack_name
-        ]);
-        
-        console.log('Previous meals from the last 7 days:', previousMeals);
-      } catch (dbError) {
-        console.error('Failed to fetch previous meal plans:', dbError);
-        // Continue even if DB fetch fails
-      }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+      
+      // Extract meal names
+      previousMeals = pastMealPlans.flatMap((plan: { breakfast_name: any; lunch_name: any; dinner_name: any; snack_name: any; }) => [
+        plan.breakfast_name,
+        plan.lunch_name,
+        plan.dinner_name,
+        plan.snack_name
+      ]);
+      
+      console.log('Previous meals from the last 7 days:', previousMeals);
+    } catch (dbError) {
+      console.error('Failed to fetch previous meal plans:', dbError);
+      // Continue even if DB fetch fails
     }
     
-    // Construct the prompt based on user data
-    const goalDescription = getGoalDescription(userGoal);
-    const dietDescription = getDietDescription(dietPreferences);
-    const metricsDescription = getMetricsDescription(userMetrics);
+    // Build user context for meal generation
+    let userContext = '';
+    if (userData) {
+      userContext = `
+User Profile:
+- Age: ${userData.age || 'Not specified'}
+- Gender: ${userData.gender || 'Not specified'}
+- Weight: ${userData.weight ? `${userData.weight} lbs` : 'Not specified'}
+- Height: ${userData.feet && userData.inches ? `${userData.feet}'${userData.inches}"` : 'Not specified'}
+- Activity Level: ${userData.activity_level || 'Not specified'}
+- Goals: ${userData.goal_type && userData.goal_type.length > 0 ? userData.goal_type.join(', ') : 'General health'}
+- Allergies/Restrictions: ${userData.allergies && userData.allergies.length > 0 ? userData.allergies.join(', ') : 'None specified'}
+- Diet Preferences: ${userData.diet_type && userData.diet_type.length > 0 ? userData.diet_type.join(', ') : 'Standard'}
+${userData.target_weight ? `- Target Weight: ${userData.target_weight} lbs` : ''}
+${userData.timeframe ? `- Timeframe: ${userData.timeframe} weeks` : ''}
+
+Please tailor the meal plan to support these specific goals and accommodate any restrictions.`;
+    } else {
+      userContext = `
+User Profile: Limited information available. Creating a balanced, healthy meal plan suitable for general wellness.`;
+    }
     
     // Add previously suggested meals to avoid repetition
     let previousMealsSection = '';
@@ -82,20 +101,15 @@ ${previousMeals.join(', ')}
     
     const prompt = `You are an expert AI nutritionist and practical meal planner. Your job is to create a full day's worth of realistic, varied, and goal-aligned meals for a typical home user who wants to eat healthy and stay consistent.
 
-User Profile:
-${metricsDescription}
-Goal:
-${goalDescription}
-Diet Preferences:
-${dietDescription}
-${previousMealsSection}
-Your task:
+${userContext}
+${previousMealsSection}Your task:
 Generate 3 meals (breakfast, lunch, dinner) and 1 snack that:
 - Help the user reach their health and fitness goal
 - Use familiar, everyday ingredients with **exact quantities and units**
 - Are easy to cook using common kitchen equipment
 - Vary in ingredients, flavors, and cooking techniques
 - Are completely different from any previously suggested meals listed above
+- Correspond to a daily total calorie count appropriate for the user's profile and goals (typically between 1500-2500 calories).
 
 Meal Design Requirements:
 - Prioritize **simple, accessible, and recognizable meals** (e.g., grilled chicken bowl, turkey wrap, scrambled eggs with toast)
