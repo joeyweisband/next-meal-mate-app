@@ -99,17 +99,95 @@ ${previousMeals.join(', ')}
 `;
     }
     
+    // Calculate target calories based on user profile
+    let targetCalories = 2000; // Default
+    if (userData) {
+      // Basic calorie calculation based on user data
+      let bmr = 1500; // Base metabolic rate default
+      
+      // Use target weight if available, otherwise fall back to current weight
+      const weightForCalculation = userData.target_weight || userData.weight;
+      
+      if (userData.age && weightForCalculation && userData.gender) {
+        // Simplified BMR calculation (Mifflin-St Jeor) using target weight
+        if (userData.gender === 'male') {
+          bmr = 10 * (weightForCalculation * 0.453592) + 6.25 * (((userData.feet || 5) * 12 + (userData.inches || 8)) * 2.54) - 5 * userData.age + 5;
+        } else {
+          bmr = 10 * (weightForCalculation * 0.453592) + 6.25 * (((userData.feet || 5) * 12 + (userData.inches || 6)) * 2.54) - 5 * userData.age - 161;
+        }
+        
+        console.log(`BMR calculated using ${userData.target_weight ? 'target' : 'current'} weight: ${weightForCalculation} lbs`);
+      }
+      
+      // Activity level multiplier
+      const activityMultipliers = {
+        'sedentary': 1.2,
+        'light': 1.375,
+        'moderate': 1.55,
+        'active': 1.725,
+        'very_active': 1.9
+      };
+      const activityMultiplier = activityMultipliers[userData.activity_level as keyof typeof activityMultipliers] || 1.55;
+      
+      // Calculate TDEE (Total Daily Energy Expenditure)
+      let tdee = bmr * activityMultiplier;
+      
+      // Adjust based on goals - be more conservative with target weight approach
+      if (userData.target_weight && userData.weight && userData.target_weight !== userData.weight) {
+        // When using target weight, we need to be more conservative
+        const weightDifference = Math.abs(userData.target_weight - userData.weight);
+        
+        if (userData.target_weight < userData.weight) {
+          // Weight loss: Use a moderate deficit approach
+          const currentWeightBMR = userData.gender === 'male' 
+            ? 10 * (userData.weight * 0.453592) + 6.25 * (((userData.feet || 5) * 12 + (userData.inches || 8)) * 2.54) - 5 * (userData.age || 30) + 5
+            : 10 * (userData.weight * 0.453592) + 6.25 * (((userData.feet || 5) * 12 + (userData.inches || 6)) * 2.54) - 5 * (userData.age || 30) - 161;
+          const currentTDEE = currentWeightBMR * activityMultiplier;
+          targetCalories = Math.max(1200, currentTDEE - 400); // 400 calorie deficit
+          console.log(`Weight loss: Using current weight TDEE (${currentTDEE}) with 400 cal deficit = ${targetCalories}`);
+        } else {
+          // Weight gain: Use a moderate surplus approach
+          targetCalories = tdee - 200; // Target weight TDEE minus 200 for gradual approach
+          console.log(`Weight gain: Using target weight TDEE (${tdee}) minus 200 cal buffer = ${targetCalories}`);
+        }
+      } else {
+        // Traditional deficit/surplus approach when no target weight specified
+        if (userData.goal_type && userData.goal_type.includes('lose_weight')) {
+          targetCalories = Math.max(1200, tdee - 500); // 500 calorie deficit for 1lb/week loss
+        } else if (userData.goal_type && userData.goal_type.includes('gain_muscle')) {
+          targetCalories = tdee + 300; // 300 calorie surplus for muscle gain
+        } else {
+          targetCalories = tdee; // Maintenance
+        }
+      }
+      
+      // Round to nearest 50
+      targetCalories = Math.round(targetCalories / 50) * 50;
+      
+      // Safety bounds
+      targetCalories = Math.max(1200, Math.min(3000, targetCalories));
+    }
+
+    console.log(`Target calories calculated: ${targetCalories} for user profile`);
+
     const prompt = `You are an expert AI nutritionist and practical meal planner. Your job is to create a full day's worth of realistic, varied, and goal-aligned meals for a typical home user who wants to eat healthy and stay consistent.
 
 ${userContext}
-${previousMealsSection}Your task:
+${previousMealsSection}CRITICAL CALORIE REQUIREMENT:
+The meals MUST total approximately ${targetCalories} calories for the entire day. This is not optional.
+- Breakfast: ${Math.round(targetCalories * 0.25)} calories (25%)
+- Lunch: ${Math.round(targetCalories * 0.35)} calories (35%) 
+- Dinner: ${Math.round(targetCalories * 0.35)} calories (35%)
+- Snack: ${Math.round(targetCalories * 0.05)} calories (5%)
+
+Your task:
 Generate 3 meals (breakfast, lunch, dinner) and 1 snack that:
 - Help the user reach their health and fitness goal
 - Use familiar, everyday ingredients with **exact quantities and units**
 - Are easy to cook using common kitchen equipment
 - Vary in ingredients, flavors, and cooking techniques
 - Are completely different from any previously suggested meals listed above
-- Correspond to a daily total calorie count appropriate for the user's profile and goals (typically between 1500-2500 calories).
+- **MUST total ${targetCalories} calories across all meals (±50 calories tolerance)**
 
 Meal Design Requirements:
 - Prioritize **simple, accessible, and recognizable meals** (e.g., grilled chicken bowl, turkey wrap, scrambled eggs with toast)
@@ -130,12 +208,13 @@ Ingredients:
 - Avoid listing just "chicken" or "rice" without amounts
 
 Macros:
+- **CALORIE COMPLIANCE IS MANDATORY**: The total calories across all meals must equal ${targetCalories} (±50 calories)
 - Macros must match the user's dietary goal across the day
 - Ensure each meal contains accurate estimates for:
-  - Calories
-  - Protein (grams)
-  - Carbohydrates (grams)
-  - Fat (grams)
+  - Calories (MUST match the target distribution above)
+  - Protein (grams) - aim for 1.2-2.0g per kg body weight
+  - Carbohydrates (grams) - adjust based on activity level and goals
+  - Fat (grams) - should be 20-35% of total calories
 
 Return Format:
 Respond ONLY with a valid JSON object that can be parsed by \`JSON.parse()\`.
@@ -281,6 +360,20 @@ Important:
     if (functionCall && functionCall.name === "generateMealPlan") {
       try {
         mealPlan = JSON.parse(functionCall.arguments);
+        
+        // Validate calorie totals
+        const totalCalories = mealPlan.breakfast.macros.calories + 
+                            mealPlan.lunch.macros.calories + 
+                            mealPlan.dinner.macros.calories + 
+                            mealPlan.snack.macros.calories;
+        
+        const calorieVariance = Math.abs(totalCalories - targetCalories);
+        console.log(`Meal plan calories: ${totalCalories}, Target: ${targetCalories}, Variance: ${calorieVariance}`);
+        
+        if (calorieVariance > 100) {
+          console.warn(`Warning: Meal plan calories (${totalCalories}) differ significantly from target (${targetCalories})`);
+        }
+        
       } catch (error) {
         console.error('Failed to parse function arguments:', error);
         throw new Error('Invalid function response from OpenAI');
@@ -314,9 +407,9 @@ Important:
     }
 
     // Generate images for each meal
-    const mealPlanWithImages = await generateImagesForMeals(mealPlan);
+    // const mealPlanWithImages = await generateImagesForMeals(mealPlan);
 
-    const response: APIMealPlanResponse = { mealPlan: mealPlanWithImages };
+    const response: APIMealPlanResponse = { mealPlan };
     return NextResponse.json(response);
   } catch (error) {
     console.error('Error generating meal plan:', error);
@@ -328,6 +421,8 @@ Important:
 }
 
 // New function to generate images
+// NOTE: Image generation temporarily disabled for performance
+/*
 async function generateImagesForMeals(mealPlan: APIMealPlan): Promise<APIMealPlan> {
   try {
     // Create a copy of the meal plan to avoid modifying the original
@@ -366,6 +461,7 @@ async function generateImagesForMeals(mealPlan: APIMealPlan): Promise<APIMealPla
     return mealPlan;
   }
 }
+*/
 
 function getGoalDescription(userGoal: unknown): string {
   if (!userGoal || typeof userGoal !== 'object' || userGoal === null) return 'maintain current weight';

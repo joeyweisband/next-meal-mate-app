@@ -47,7 +47,7 @@ export async function generateDailyMealPlan(
       id: `${mealType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: aiMeal.title,
       description: aiMeal.reasoning,
-      imageUrl: aiMeal.imageUrl || '/meal-placeholder.svg', // Use the generated image or fallback
+      imageUrl: aiMeal.imageUrl || undefined, // Use the generated image or no image
       prepTime: 15, // Default prep time
       cookTime: 20, // Default cook time
       servings: 1,

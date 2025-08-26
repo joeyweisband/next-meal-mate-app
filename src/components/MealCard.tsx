@@ -18,9 +18,6 @@ const MealCard: React.FC<MealCardProps> = ({
 }) => {
   const formattedMealType = mealType.charAt(0).toUpperCase() + mealType.slice(1);
   
-  // Add a placeholder image URL to use if the meal doesn't have an image
-  const placeholderImage = `/images/meal-placeholder-${mealType}.jpg`;
-  
   return (
     <div
       style={{
@@ -47,8 +44,8 @@ const MealCard: React.FC<MealCardProps> = ({
               objectFit: "cover" 
             }} 
             onError={(e) => {
-              // If image fails to load, replace with placeholder
-              (e.target as HTMLImageElement).src = placeholderImage;
+              // If image fails to load, hide the image and show emoji placeholder
+              (e.target as HTMLImageElement).style.display = 'none';
             }}
           />
         ) : (

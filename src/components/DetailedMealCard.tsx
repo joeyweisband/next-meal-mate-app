@@ -15,8 +15,6 @@ export default function DetailedMealCard({ meal, onClose }: DetailedMealCardProp
     return 'bg-gray-500';
   };
 
-  const placeholderImage = "/images/meal-placeholder.jpg";
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 modal-overlay">
       <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto modal-content">
@@ -30,19 +28,22 @@ export default function DetailedMealCard({ meal, onClose }: DetailedMealCardProp
         
         {/* Meal image header - Replace gradient with actual image */}
         <div className="h-64 relative rounded-t-2xl overflow-hidden">
-          {meal.imageUrl ? (
+          {/* Always show gradient background */}
+          <div className="h-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+            <span className="text-5xl">🍽️</span>
+          </div>
+          
+          {/* Show image on top if available */}
+          {meal.imageUrl && (
             <img 
               src={meal.imageUrl} 
               alt={meal.name} 
-              className="w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = placeholderImage;
+                // If image fails to load, hide it to show gradient background
+                (e.target as HTMLImageElement).style.display = 'none';
               }}
             />
-          ) : (
-            <div className="h-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-              <span className="text-5xl">🍽️</span>
-            </div>
           )}
           
           {/* Overlay for better text readability */}
