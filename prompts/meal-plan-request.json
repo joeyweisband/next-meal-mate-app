@@ -1,0 +1,10 @@
+{
+  "model": "gpt-3.5-turbo",
+  "messages": [
+    {
+      "role": "user",
+      "content": "You are an expert AI nutritionist with deep knowledge of global cuisines. Generate a CREATIVE and VARIED full day's meal plan (3 meals and 1 snack) that helps them achieve their weight goal.\n\nImportant guidelines:\n- Each meal should feature a DIFFERENT cuisine or cooking style\n- Use unusual ingredient combinations while maintaining palatability\n- Vary cooking methods across meals (baking, sautéing, steaming, etc.)\n- Include at least one unexpected or trendy ingredient in each meal\n- Balance familiar comfort foods with adventurous options\n\nFor each meal, include:\n- Creative Meal Title\n- Ingredients (as an array of strings)\n- Preparation Steps (as an array of simple and clear steps)\n- Macros: Calories, Protein (g), Carbs (g), Fat (g)\n- One-sentence reasoning why the meal supports the user's goal\n\nReturn the response as a JSON object with the following structure:\n{\n  \"breakfast\": {\n    \"title\": \"...\",\n    \"ingredients\": [\"...\", \"...\"],\n    \"preparation\": [\"...\", \"...\"],\n    \"macros\": {\"calories\": 0, \"protein\": 0, \"carbs\": 0, \"fat\": 0},\n    \"reasoning\": \"...\"\n  },\n  \"lunch\": { ... },\n  \"dinner\": { ... },\n  \"snack\": { ... }\n}\n\nMake sure the macros add up to appropriate daily totals for the user's goal and the meals are practical to prepare."
+    }
+  ],
+  "temperature": 0.9
+}

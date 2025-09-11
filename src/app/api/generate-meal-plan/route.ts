@@ -4,9 +4,11 @@ import type { APIMealPlan, APIMealPlanResponse } from '../../schemas/api-meal';
 import { getAuth } from '@clerk/nextjs/server';
 import prisma, { initializeDatabase } from '@/utils/prisma-db';
 
-// Initialize OpenAI client
+// Initialize OpenAI client with timeout
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  timeout: 30000, // 30 second timeout
+  maxRetries: 2,
 });
 
 export async function POST(request: NextRequest) {
@@ -25,63 +27,74 @@ export async function POST(request: NextRequest) {
     console.log("Meal Plan API - Generating meal plan for date:", selectedDate);
     console.log("Meal Plan API - User ID:", userId);
 
-    // Get user data from database to include in meal generation
-    let userData = null;
-    try {
-      userData = await prisma.user.findUnique({
-        where: { id: userId }
-      });
-      console.log("Meal Plan API - User data found:", userData ? 'Yes' : 'No');
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      // Continue without user data if there's an error
-    }
-
-    // Get previous meal plans from the last 7 days
-    let previousMeals: any[] = [];
-    try {
-      // Fetch meal plans from the last 7 days
-      const pastMealPlans = await prisma.mealPlan.findMany({
+    // Get user data and previous meals in parallel (non-blocking)
+    const [userData, previousMeals] = await Promise.allSettled([
+      // Get user data
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          age: true,
+          gender: true,
+          weight: true,
+          feet: true,
+          inches: true,
+          activity_level: true,
+          goal_type: true,
+          allergies: true,
+          diet_type: true,
+          target_weight: true,
+          timeframe: true
+        }
+      }),
+      // Get previous meal plans (simplified query)
+      prisma.mealPlan.findMany({
         where: {
           userId: userId,
           createdAt: {
-            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7 days ago
+            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
           }
         },
-        orderBy: {
-          createdAt: 'desc'
-        }
-      });
-      
-      // Extract meal names
-      previousMeals = pastMealPlans.flatMap((plan: { breakfast_name: any; lunch_name: any; dinner_name: any; snack_name: any; }) => [
-        plan.breakfast_name,
-        plan.lunch_name,
-        plan.dinner_name,
-        plan.snack_name
-      ]);
-      
-      console.log('Previous meals from the last 7 days:', previousMeals);
-    } catch (dbError) {
-      console.error('Failed to fetch previous meal plans:', dbError);
-      // Continue even if DB fetch fails
-    }
+        select: {
+          breakfast_name: true,
+          lunch_name: true,
+          dinner_name: true,
+          snack_name: true
+        },
+        take: 10 // Limit to last 10 meal plans
+      })
+    ]);
+
+    // Extract user data safely
+    const userInfo = userData.status === 'fulfilled' ? userData.value : null;
+    console.log("Meal Plan API - User data found:", userInfo ? 'Yes' : 'No');
+
+    // Extract previous meals safely
+    const pastMealNames = previousMeals.status === 'fulfilled' 
+      ? previousMeals.value.flatMap(plan => [
+          plan.breakfast_name,
+          plan.lunch_name,
+          plan.dinner_name,
+          plan.snack_name
+        ]).filter(Boolean)
+      : [];
+    
+    console.log('Previous meals from the last 7 days:', pastMealNames.length);
     
     // Build user context for meal generation
     let userContext = '';
-    if (userData) {
+    if (userInfo) {
       userContext = `
 User Profile:
-- Age: ${userData.age || 'Not specified'}
-- Gender: ${userData.gender || 'Not specified'}
-- Weight: ${userData.weight ? `${userData.weight} lbs` : 'Not specified'}
-- Height: ${userData.feet && userData.inches ? `${userData.feet}'${userData.inches}"` : 'Not specified'}
-- Activity Level: ${userData.activity_level || 'Not specified'}
-- Goals: ${userData.goal_type && userData.goal_type.length > 0 ? userData.goal_type.join(', ') : 'General health'}
-- Allergies/Restrictions: ${userData.allergies && userData.allergies.length > 0 ? userData.allergies.join(', ') : 'None specified'}
-- Diet Preferences: ${userData.diet_type && userData.diet_type.length > 0 ? userData.diet_type.join(', ') : 'Standard'}
-${userData.target_weight ? `- Target Weight: ${userData.target_weight} lbs` : ''}
-${userData.timeframe ? `- Timeframe: ${userData.timeframe} weeks` : ''}
+- Age: ${userInfo.age || 'Not specified'}
+- Gender: ${userInfo.gender || 'Not specified'}
+- Weight: ${userInfo.weight ? `${userInfo.weight} lbs` : 'Not specified'}
+- Height: ${userInfo.feet && userInfo.inches ? `${userInfo.feet}'${userInfo.inches}"` : 'Not specified'}
+- Activity Level: ${userInfo.activity_level || 'Not specified'}
+- Goals: ${userInfo.goal_type && userInfo.goal_type.length > 0 ? userInfo.goal_type.join(', ') : 'General health'}
+- Allergies/Restrictions: ${userInfo.allergies && userInfo.allergies.length > 0 ? userInfo.allergies.join(', ') : 'None specified'}
+- Diet Preferences: ${userInfo.diet_type && userInfo.diet_type.length > 0 ? userInfo.diet_type.join(', ') : 'Standard'}
+${userInfo.target_weight ? `- Target Weight: ${userInfo.target_weight} lbs` : ''}
+${userInfo.timeframe ? `- Timeframe: ${userInfo.timeframe} weeks` : ''}
 
 Please tailor the meal plan to support these specific goals and accommodate any restrictions.`;
     } else {
@@ -91,32 +104,32 @@ User Profile: Limited information available. Creating a balanced, healthy meal p
     
     // Add previously suggested meals to avoid repetition
     let previousMealsSection = '';
-    if (previousMeals.length > 0) {
+    if (pastMealNames.length > 0) {
       previousMealsSection = `
 Previously Suggested Meals (DO NOT SUGGEST AGAIN):
-${previousMeals.join(', ')}
+${pastMealNames.join(', ')}
 
 `;
     }
     
     // Calculate target calories based on user profile
     let targetCalories = 2000; // Default
-    if (userData) {
+    if (userInfo) {
       // Basic calorie calculation based on user data
       let bmr = 1500; // Base metabolic rate default
       
       // Use target weight if available, otherwise fall back to current weight
-      const weightForCalculation = userData.target_weight || userData.weight;
+      const weightForCalculation = userInfo.target_weight || userInfo.weight;
       
-      if (userData.age && weightForCalculation && userData.gender) {
+      if (userInfo.age && weightForCalculation && userInfo.gender) {
         // Simplified BMR calculation (Mifflin-St Jeor) using target weight
-        if (userData.gender === 'male') {
-          bmr = 10 * (weightForCalculation * 0.453592) + 6.25 * (((userData.feet || 5) * 12 + (userData.inches || 8)) * 2.54) - 5 * userData.age + 5;
+        if (userInfo.gender === 'male') {
+          bmr = 10 * (weightForCalculation * 0.453592) + 6.25 * (((userInfo.feet || 5) * 12 + (userInfo.inches || 8)) * 2.54) - 5 * userInfo.age + 5;
         } else {
-          bmr = 10 * (weightForCalculation * 0.453592) + 6.25 * (((userData.feet || 5) * 12 + (userData.inches || 6)) * 2.54) - 5 * userData.age - 161;
+          bmr = 10 * (weightForCalculation * 0.453592) + 6.25 * (((userInfo.feet || 5) * 12 + (userInfo.inches || 6)) * 2.54) - 5 * userInfo.age - 161;
         }
         
-        console.log(`BMR calculated using ${userData.target_weight ? 'target' : 'current'} weight: ${weightForCalculation} lbs`);
+        console.log(`BMR calculated using ${userInfo.target_weight ? 'target' : 'current'} weight: ${weightForCalculation} lbs`);
       }
       
       // Activity level multiplier
@@ -127,21 +140,21 @@ ${previousMeals.join(', ')}
         'active': 1.725,
         'very_active': 1.9
       };
-      const activityMultiplier = activityMultipliers[userData.activity_level as keyof typeof activityMultipliers] || 1.55;
+      const activityMultiplier = activityMultipliers[userInfo.activity_level as keyof typeof activityMultipliers] || 1.55;
       
       // Calculate TDEE (Total Daily Energy Expenditure)
       let tdee = bmr * activityMultiplier;
       
       // Adjust based on goals - be more conservative with target weight approach
-      if (userData.target_weight && userData.weight && userData.target_weight !== userData.weight) {
+      if (userInfo.target_weight && userInfo.weight && userInfo.target_weight !== userInfo.weight) {
         // When using target weight, we need to be more conservative
-        const weightDifference = Math.abs(userData.target_weight - userData.weight);
+        const weightDifference = Math.abs(userInfo.target_weight - userInfo.weight);
         
-        if (userData.target_weight < userData.weight) {
+        if (userInfo.target_weight < userInfo.weight) {
           // Weight loss: Use a moderate deficit approach
-          const currentWeightBMR = userData.gender === 'male' 
-            ? 10 * (userData.weight * 0.453592) + 6.25 * (((userData.feet || 5) * 12 + (userData.inches || 8)) * 2.54) - 5 * (userData.age || 30) + 5
-            : 10 * (userData.weight * 0.453592) + 6.25 * (((userData.feet || 5) * 12 + (userData.inches || 6)) * 2.54) - 5 * (userData.age || 30) - 161;
+          const currentWeightBMR = userInfo.gender === 'male' 
+            ? 10 * (userInfo.weight * 0.453592) + 6.25 * (((userInfo.feet || 5) * 12 + (userInfo.inches || 8)) * 2.54) - 5 * (userInfo.age || 30) + 5
+            : 10 * (userInfo.weight * 0.453592) + 6.25 * (((userInfo.feet || 5) * 12 + (userInfo.inches || 6)) * 2.54) - 5 * (userInfo.age || 30) - 161;
           const currentTDEE = currentWeightBMR * activityMultiplier;
           targetCalories = Math.max(1200, currentTDEE - 400); // 400 calorie deficit
           console.log(`Weight loss: Using current weight TDEE (${currentTDEE}) with 400 cal deficit = ${targetCalories}`);
@@ -152,9 +165,9 @@ ${previousMeals.join(', ')}
         }
       } else {
         // Traditional deficit/surplus approach when no target weight specified
-        if (userData.goal_type && userData.goal_type.includes('lose_weight')) {
+        if (userInfo.goal_type && userInfo.goal_type.includes('lose_weight')) {
           targetCalories = Math.max(1200, tdee - 500); // 500 calorie deficit for 1lb/week loss
-        } else if (userData.goal_type && userData.goal_type.includes('gain_muscle')) {
+        } else if (userInfo.goal_type && userInfo.goal_type.includes('gain_muscle')) {
           targetCalories = tdee + 300; // 300 calorie surplus for muscle gain
         } else {
           targetCalories = tdee; // Maintenance
@@ -170,240 +183,110 @@ ${previousMeals.join(', ')}
 
     console.log(`Target calories calculated: ${targetCalories} for user profile`);
 
-    const prompt = `You are an expert AI nutritionist and practical meal planner. Your job is to create a full day's worth of realistic, varied, and goal-aligned meals for a typical home user who wants to eat healthy and stay consistent.
+    const prompt = `Generate a ${targetCalories}-calorie meal plan as JSON.
 
 ${userContext}
-${previousMealsSection}CRITICAL CALORIE REQUIREMENT:
-The meals MUST total approximately ${targetCalories} calories for the entire day. This is not optional.
-- Breakfast: ${Math.round(targetCalories * 0.25)} calories (25%)
-- Lunch: ${Math.round(targetCalories * 0.35)} calories (35%) 
-- Dinner: ${Math.round(targetCalories * 0.35)} calories (35%)
-- Snack: ${Math.round(targetCalories * 0.05)} calories (5%)
+${previousMealsSection}
+CALORIE TARGETS:
+- Breakfast: ${Math.round(targetCalories * 0.25)} cal (25%)
+- Lunch: ${Math.round(targetCalories * 0.35)} cal (35%) 
+- Dinner: ${Math.round(targetCalories * 0.35)} cal (35%)
+- Snack: ${Math.round(targetCalories * 0.05)} cal (5%)
 
-Your task:
-Generate 3 meals (breakfast, lunch, dinner) and 1 snack that:
-- Help the user reach their health and fitness goal
-- Use familiar, everyday ingredients with **exact quantities and units**
-- Are easy to cook using common kitchen equipment
-- Vary in ingredients, flavors, and cooking techniques
-- Are completely different from any previously suggested meals listed above
-- **MUST total ${targetCalories} calories across all meals (±50 calories tolerance)**
+REQUIREMENTS:
+- Use common ingredients with exact amounts
+- Simple 30-min recipes
+- Vary ingredients and cooking methods
+- Avoid repeating previous meals
+- Total must equal ${targetCalories} ±50 calories
 
-Meal Design Requirements:
-- Prioritize **simple, accessible, and recognizable meals** (e.g., grilled chicken bowl, turkey wrap, scrambled eggs with toast)
-- Add occasional creativity or flair (e.g., using Greek yogurt for sauces, adding herbs, swapping rice for quinoa) — but only if practical
-- Avoid hard-to-find or highly exotic ingredients (no niche global meals unless it's a common variation in American kitchens)
-- Do not repeat the same ingredient more than twice in a day (e.g., don't use chicken in all meals)
-- Vary the cooking methods (e.g., don't bake every meal)
-- Do not generate meals that resemble each other in structure (e.g., don't generate three rice bowls)
-- Do not reuse meals or variations that are too similar to previous suggestions
-- Ensure meals are prep-friendly and can be made in under ~30 minutes (unless clearly stated otherwise)
-
-Ingredients:
-- Include a list of ingredients for each meal as an array of strings
-- **Each ingredient must include a specific amount and unit**, like:
-  - "150g chicken breast"
-  - "1 tbsp olive oil"
-  - "1 slice whole grain bread"
-- Avoid listing just "chicken" or "rice" without amounts
-
-Macros:
-- **CALORIE COMPLIANCE IS MANDATORY**: The total calories across all meals must equal ${targetCalories} (±50 calories)
-- Macros must match the user's dietary goal across the day
-- Ensure each meal contains accurate estimates for:
-  - Calories (MUST match the target distribution above)
-  - Protein (grams) - aim for 1.2-2.0g per kg body weight
-  - Carbohydrates (grams) - adjust based on activity level and goals
-  - Fat (grams) - should be 20-35% of total calories
-
-Return Format:
-Respond ONLY with a valid JSON object that can be parsed by \`JSON.parse()\`.
-
-Structure:
-
+JSON FORMAT:
 {
   "breakfast": {
-    "title": "Scrambled Eggs on Toast with Avocado",
-    "ingredients": [
-      "2 eggs",
-      "1 slice whole grain bread",
-      "50g avocado",
-      "1 tsp olive oil"
-    ],
-    "preparation": [
-      "Crack the eggs into a bowl and beat well.",
-      "Heat olive oil in a non-stick pan and scramble the eggs.",
-      "Toast the bread slice.",
-      "Top the toast with eggs and sliced avocado."
-    ],
-    "macros": {
-      "calories": 350,
-      "protein": 18,
-      "carbs": 20,
-      "fat": 22
-    },
-    "reasoning": "This meal provides healthy fats and protein to start the day, keeping the user full and energized."
+    "title": "Meal Name",
+    "ingredients": ["2 eggs", "1 slice bread"],
+    "preparation": ["Step 1", "Step 2"],
+    "macros": {"calories": 500, "protein": 25, "carbs": 30, "fat": 15},
+    "reasoning": "Brief explanation"
   },
-  "lunch": { ... },
-  "dinner": { ... },
-  "snack": { ... }
+  "lunch": {...},
+  "dinner": {...},
+  "snack": {...}
 }
 
-Important:
-- Format strictly in JSON with **double quotes** on all keys and strings
-- Do not include any text outside the JSON block
-- Meals should be balanced, realistic, and achievable`;
+Return ONLY valid JSON.`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-2025-04-14",
-      messages: [{ role: "user", content: prompt }],
-      functions: [
-        {
-          name: "generateMealPlan",
-          description: "Generate a meal plan based on user requirements",
-          parameters: {
-            type: "object",
-            properties: {
-              breakfast: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  ingredients: { type: "array", items: { type: "string" } },
-                  preparation: { type: "array", items: { type: "string" } },
-                  macros: { 
-                    type: "object", 
-                    properties: {
-                      calories: { type: "number" },
-                      protein: { type: "number" },
-                      carbs: { type: "number" },
-                      fat: { type: "number" }
-                    },
-                    required: ["calories", "protein", "carbs", "fat"]
-                  },
-                  reasoning: { type: "string" }
-                },
-                required: ["title", "ingredients", "preparation", "macros", "reasoning"]
-              },
-              lunch: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  ingredients: { type: "array", items: { type: "string" } },
-                  preparation: { type: "array", items: { type: "string" } },
-                  macros: { 
-                    type: "object", 
-                    properties: {
-                      calories: { type: "number" },
-                      protein: { type: "number" },
-                      carbs: { type: "number" },
-                      fat: { type: "number" }
-                    },
-                    required: ["calories", "protein", "carbs", "fat"]
-                  },
-                  reasoning: { type: "string" }
-                },
-                required: ["title", "ingredients", "preparation", "macros", "reasoning"]
-              },
-              dinner: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  ingredients: { type: "array", items: { type: "string" } },
-                  preparation: { type: "array", items: { type: "string" } },
-                  macros: { 
-                    type: "object", 
-                    properties: {
-                      calories: { type: "number" },
-                      protein: { type: "number" },
-                      carbs: { type: "number" },
-                      fat: { type: "number" }
-                    },
-                    required: ["calories", "protein", "carbs", "fat"]
-                  },
-                  reasoning: { type: "string" }
-                },
-                required: ["title", "ingredients", "preparation", "macros", "reasoning"]
-              },
-              snack: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  ingredients: { type: "array", items: { type: "string" } },
-                  preparation: { type: "array", items: { type: "string" } },
-                  macros: { 
-                    type: "object", 
-                    properties: {
-                      calories: { type: "number" },
-                      protein: { type: "number" },
-                      carbs: { type: "number" },
-                      fat: { type: "number" }
-                    },
-                    required: ["calories", "protein", "carbs", "fat"]
-                  },
-                  reasoning: { type: "string" }
-                },
-                required: ["title", "ingredients", "preparation", "macros", "reasoning"]
-              }
-            },
-            required: ["breakfast", "lunch", "dinner", "snack"]
-          }
-        }
-      ],
-      function_call: { name: "generateMealPlan" }
+    // Create a timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('OpenAI request timeout')), 25000); // 25 second timeout
     });
 
-    console.log('OpenAI API response:', completion); // <-- Add this
+    const completion = await Promise.race([
+      openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { 
+            role: "system", 
+            content: "You are a nutrition expert that generates meal plans in JSON format. Always respond with valid JSON only." 
+          },
+          { 
+            role: "user", 
+            content: prompt 
+          }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+        max_tokens: 2000
+      }),
+      timeoutPromise
+    ]) as OpenAI.Chat.Completions.ChatCompletion;
 
-    // Parse the function call args
-    const functionCall = completion.choices[0].message.function_call;
+    console.log('OpenAI API response:', completion);
+
+    // Parse the JSON response directly
     let mealPlan: APIMealPlan;
-    if (functionCall && functionCall.name === "generateMealPlan") {
-      try {
-        mealPlan = JSON.parse(functionCall.arguments);
-        
-        // Validate calorie totals
-        const totalCalories = mealPlan.breakfast.macros.calories + 
-                            mealPlan.lunch.macros.calories + 
-                            mealPlan.dinner.macros.calories + 
-                            mealPlan.snack.macros.calories;
-        
-        const calorieVariance = Math.abs(totalCalories - targetCalories);
-        console.log(`Meal plan calories: ${totalCalories}, Target: ${targetCalories}, Variance: ${calorieVariance}`);
-        
-        if (calorieVariance > 100) {
-          console.warn(`Warning: Meal plan calories (${totalCalories}) differ significantly from target (${targetCalories})`);
-        }
-        
-      } catch (error) {
-        console.error('Failed to parse function arguments:', error);
-        throw new Error('Invalid function response from OpenAI');
+    try {
+      const responseContent = completion.choices[0].message.content;
+      if (!responseContent) {
+        throw new Error('No content received from OpenAI');
       }
-    } else {
-      throw new Error('No valid function call received from OpenAI');
+      
+      mealPlan = JSON.parse(responseContent);
+      
+      // Validate calorie totals
+      const totalCalories = mealPlan.breakfast.macros.calories + 
+                          mealPlan.lunch.macros.calories + 
+                          mealPlan.dinner.macros.calories + 
+                          mealPlan.snack.macros.calories;
+      
+      const calorieVariance = Math.abs(totalCalories - targetCalories);
+      console.log(`Meal plan calories: ${totalCalories}, Target: ${targetCalories}, Variance: ${calorieVariance}`);
+      
+      if (calorieVariance > 100) {
+        console.warn(`Warning: Meal plan calories (${totalCalories}) differ significantly from target (${targetCalories})`);
+      }
+      
+    } catch (error) {
+      console.error('Failed to parse OpenAI response:', error);
+      throw new Error('Invalid JSON response from OpenAI');
     }
 
-    // If we have a user ID, save the meal plan to the database
+    // Save meal plan to database asynchronously (non-blocking)
     if (userId) {
-      try {
-        // Import prisma client
-        const { prisma } = await import('@/utils/prisma-db');
-        
-        // Save meal plan to the database
-        await prisma.mealPlan.create({
-          data: {
-            userId: userId,
-            breakfast_name: mealPlan.breakfast.title,
-            lunch_name: mealPlan.lunch.title,
-            dinner_name: mealPlan.dinner.title,
-            snack_name: mealPlan.snack.title
-          }
-        });
-        
+      // Don't await this - let it run in background
+      prisma.mealPlan.create({
+        data: {
+          userId: userId,
+          breakfast_name: mealPlan.breakfast.title,
+          lunch_name: mealPlan.lunch.title,
+          dinner_name: mealPlan.dinner.title,
+          snack_name: mealPlan.snack.title
+        }
+      }).then(() => {
         console.log('Meal plan saved to database for user:', userId);
-      } catch (dbError) {
+      }).catch(dbError => {
         console.error('Failed to save meal plan to database:', dbError);
-        // We'll continue even if saving to DB fails
-      }
+      });
     }
 
     // Generate images for each meal
