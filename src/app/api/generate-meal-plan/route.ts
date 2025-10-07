@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import type { APIMealPlan, APIMealPlanResponse } from '../../schemas/api-meal';
 import { getAuth } from '@clerk/nextjs/server';
 import prisma, { initializeDatabase } from '@/utils/prisma-db';
+import { validateMealPlan, correctMacros } from '@/utils/macro-validator';
 
 // Initialize OpenAI client with timeout
 const openai = new OpenAI({
@@ -189,9 +190,26 @@ ${userContext}
 ${previousMealsSection}
 CALORIE TARGETS:
 - Breakfast: ${Math.round(targetCalories * 0.25)} cal (25%)
-- Lunch: ${Math.round(targetCalories * 0.35)} cal (35%) 
+- Lunch: ${Math.round(targetCalories * 0.35)} cal (35%)
 - Dinner: ${Math.round(targetCalories * 0.35)} cal (35%)
 - Snack: ${Math.round(targetCalories * 0.05)} cal (5%)
+
+CRITICAL MACRO CALCULATION REQUIREMENTS:
+⚠️ MACROS MUST BE MATHEMATICALLY ACCURATE using this formula:
+   Calories = (Protein grams × 4) + (Carbs grams × 4) + (Fat grams × 9)
+
+Example of CORRECT macros:
+- Protein: 30g, Carbs: 40g, Fat: 15g
+- Calculation: (30×4) + (40×4) + (15×9) = 120 + 160 + 135 = 415 calories ✓
+
+Example of INCORRECT macros:
+- Protein: 30g, Carbs: 40g, Fat: 15g, Calories: 500 ✗ (Should be 415)
+
+For each meal:
+1. First determine realistic protein/carbs/fat amounts for the ingredients
+2. Calculate calories using the 4-4-9 formula
+3. Verify your calculation before finalizing
+4. Ensure the calculated calories match your reported calories EXACTLY
 
 REQUIREMENTS:
 - Use common ingredients with exact amounts
@@ -199,6 +217,7 @@ REQUIREMENTS:
 - Vary ingredients and cooking methods
 - Avoid repeating previous meals
 - Total must equal ${targetCalories} ±50 calories
+- Each meal's macros MUST follow the 4-4-9 formula (no exceptions)
 
 JSON FORMAT:
 {
@@ -250,22 +269,61 @@ Return ONLY valid JSON.`;
       if (!responseContent) {
         throw new Error('No content received from OpenAI');
       }
-      
+
       mealPlan = JSON.parse(responseContent);
-      
+
+      // Validate macro accuracy using 4-4-9 formula
+      console.log('Validating meal plan macros...');
+      const validation = validateMealPlan(mealPlan, targetCalories);
+
+      // Log all warnings
+      if (validation.warnings.length > 0) {
+        console.warn('Macro validation warnings:');
+        validation.warnings.forEach(warning => console.warn(`  - ${warning}`));
+      }
+
+      // If there are errors, try to auto-correct minor discrepancies
+      if (!validation.isValid) {
+        console.error('Macro validation errors found:');
+        validation.errors.forEach(error => console.error(`  - ${error}`));
+
+        // Attempt auto-correction for minor issues
+        console.log('Attempting to auto-correct macro discrepancies...');
+        mealPlan.breakfast.macros = correctMacros(mealPlan.breakfast.macros);
+        mealPlan.lunch.macros = correctMacros(mealPlan.lunch.macros);
+        mealPlan.dinner.macros = correctMacros(mealPlan.dinner.macros);
+        mealPlan.snack.macros = correctMacros(mealPlan.snack.macros);
+
+        // Re-validate after correction
+        const revalidation = validateMealPlan(mealPlan, targetCalories);
+        if (!revalidation.isValid) {
+          // If still invalid after correction, reject the meal plan
+          console.error('Macro validation failed even after auto-correction:');
+          revalidation.errors.forEach(error => console.error(`  - ${error}`));
+          throw new Error(
+            'Generated meal plan has invalid macros that could not be auto-corrected. ' +
+            'Please try generating again. Errors: ' + revalidation.errors.join('; ')
+          );
+        } else {
+          console.log('✓ Macro discrepancies successfully corrected');
+        }
+      } else {
+        console.log('✓ All meal macros are mathematically accurate');
+      }
+
       // Validate calorie totals
-      const totalCalories = mealPlan.breakfast.macros.calories + 
-                          mealPlan.lunch.macros.calories + 
-                          mealPlan.dinner.macros.calories + 
+      const totalCalories = mealPlan.breakfast.macros.calories +
+                          mealPlan.lunch.macros.calories +
+                          mealPlan.dinner.macros.calories +
                           mealPlan.snack.macros.calories;
-      
+
       const calorieVariance = Math.abs(totalCalories - targetCalories);
       console.log(`Meal plan calories: ${totalCalories}, Target: ${targetCalories}, Variance: ${calorieVariance}`);
-      
+
       if (calorieVariance > 100) {
         console.warn(`Warning: Meal plan calories (${totalCalories}) differ significantly from target (${targetCalories})`);
       }
-      
+
     } catch (error) {
       console.error('Failed to parse OpenAI response:', error);
       throw new Error('Invalid JSON response from OpenAI');
