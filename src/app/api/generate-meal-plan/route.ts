@@ -221,9 +221,9 @@ REQUIREMENTS:
 
 When generating meals and macros, explicitly label whether each ingredient is raw or cooked, and ensure units are in grams whenever possible.
 For example:
-    •    ‘200g raw lean beef (5% fat)’ instead of ‘200g lean beef strips’
-    •    ‘185g raw brown rice’ instead of ‘1 cup brown rice’
-    •    ‘100g raw broccoli’ instead of ‘1 cup broccoli’
+- '200g raw lean beef (5% fat)' instead of '200g lean beef strips'
+- '185g raw brown rice' instead of '1 cup brown rice'
+- '100g raw broccoli' instead of '1 cup broccoli'
 Always assume ingredients are raw unless otherwise specified, and calculate macros based on raw weights.
 
 JSON FORMAT:
