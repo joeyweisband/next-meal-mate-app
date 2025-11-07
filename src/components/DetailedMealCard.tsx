@@ -57,11 +57,13 @@ export default function DetailedMealCard({ meal, onClose }: DetailedMealCardProp
              meal.name?.toLowerCase().includes('dinner') ? '🌙 Dinner' : '🍎 Snack'}
           </div>
 
-          <div className="absolute bottom-4 left-6 text-white">
-            <h1 className="text-2xl font-black text-white drop-shadow-lg" style={{
+          <div className="absolute bottom-4 left-6">
+            <h1 className="text-2xl font-black drop-shadow-lg" style={{
+              color: '#ffffff',
               textShadow: '3px 3px 6px rgba(0,0,0,1), 0px 0px 10px rgba(0,0,0,1), 1px 1px 3px rgba(0,0,0,1), -1px -1px 0px rgba(0,0,0,0.9)'
             }}>{meal.name || 'Meal'}</h1>
-            <p className="text-white text-sm mt-1 font-semibold drop-shadow-md" style={{
+            <p className="text-sm mt-1 font-semibold drop-shadow-md" style={{
+              color: '#ffffff',
               textShadow: '2px 2px 4px rgba(0,0,0,1), 0px 0px 6px rgba(0,0,0,1), 1px 1px 2px rgba(0,0,0,1)'
             }}>{(meal.prepTime || 0) + (meal.cookTime || 0)} minutes to prepare</p>
           </div>
