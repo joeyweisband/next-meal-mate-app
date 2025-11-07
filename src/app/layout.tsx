@@ -2,7 +2,7 @@
 import { ClerkProvider, useUser } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import { useEffect } from "react";
-import { Home, Calendar, User, Settings } from "lucide-react";
+import { Calendar, User, Settings } from "lucide-react";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -86,10 +86,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           zIndex: 100,
           boxShadow: '0 -2px 8px rgba(0,0,0,0.04)'
         }}>
-          <a href="/meal-plan" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: 13, gap: 4 }}>
-            <Home size={24} strokeWidth={2} />
-            Home
-          </a>
           <a href="/meal-plan" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: 13, gap: 4 }}>
             <Calendar size={24} strokeWidth={2} />
             Meal Plan
