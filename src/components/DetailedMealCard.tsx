@@ -49,20 +49,20 @@ export default function DetailedMealCard({ meal, onClose }: DetailedMealCardProp
           )}
           
           {/* Overlay for better text readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-black/50"></div>
-          
+          <div className="absolute inset-0 bg-gradient-to-t from-black/95 to-black/60"></div>
+
           <div className={`absolute top-4 left-4 ${getMealTypeColor(meal.name)} text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg`}>
             {meal.name?.toLowerCase().includes('breakfast') ? '🌅 Breakfast' :
              meal.name?.toLowerCase().includes('lunch') ? '☀️ Lunch' :
              meal.name?.toLowerCase().includes('dinner') ? '🌙 Dinner' : '🍎 Snack'}
           </div>
-          
+
           <div className="absolute bottom-4 left-6 text-white">
-            <h1 className="text-2xl font-black text-white" style={{
-              textShadow: '2px 2px 4px rgba(0,0,0,1), 0px 0px 6px rgba(0,0,0,0.8), 1px 1px 2px rgba(0,0,0,1)'
+            <h1 className="text-2xl font-black text-white drop-shadow-lg" style={{
+              textShadow: '3px 3px 6px rgba(0,0,0,1), 0px 0px 10px rgba(0,0,0,1), 1px 1px 3px rgba(0,0,0,1), -1px -1px 0px rgba(0,0,0,0.9)'
             }}>{meal.name || 'Meal'}</h1>
-            <p className="text-white text-sm mt-1 font-semibold" style={{
-              textShadow: '1px 1px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8)'
+            <p className="text-white text-sm mt-1 font-semibold drop-shadow-md" style={{
+              textShadow: '2px 2px 4px rgba(0,0,0,1), 0px 0px 6px rgba(0,0,0,1), 1px 1px 2px rgba(0,0,0,1)'
             }}>{(meal.prepTime || 0) + (meal.cookTime || 0)} minutes to prepare</p>
           </div>
         </div>
