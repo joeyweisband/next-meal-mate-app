@@ -12,45 +12,55 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch the active meal plan with all meals
-    const activeMealPlan = await prisma.mealPlan.findFirst({
+    // Get the date range from query params (7-day window from today)
+    const today = new Date().toISOString().split('T')[0];
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + 7);
+    const maxDateString = maxDate.toISOString().split('T')[0];
+
+    // Fetch all active meal plans within the date range
+    const mealPlans = await prisma.mealPlan.findMany({
       where: {
         userId: userId,
-        status: 'active'
+        status: 'active',
+        date: {
+          gte: today,
+          lte: maxDateString
+        }
       },
       include: {
         meals: true
       },
       orderBy: {
-        createdAt: 'desc'
+        date: 'asc'
       }
     });
 
-    if (!activeMealPlan) {
-      return NextResponse.json({ mealPlan: null });
+    if (mealPlans.length === 0) {
+      return NextResponse.json({ mealPlans: [] });
     }
 
     // Transform database structure to frontend format
-    const transformedMealPlan = {
-      id: activeMealPlan.id,
-      date: activeMealPlan.createdAt.toISOString().split('T')[0],
+    const transformedMealPlans = mealPlans.map(mealPlan => ({
+      id: mealPlan.id,
+      date: mealPlan.date,
       meals: {
-        breakfast: transformMeal(activeMealPlan.meals.find(m => m.type === 'breakfast')),
-        lunch: transformMeal(activeMealPlan.meals.find(m => m.type === 'lunch')),
-        dinner: transformMeal(activeMealPlan.meals.find(m => m.type === 'dinner')),
-        snacks: activeMealPlan.meals
+        breakfast: transformMeal(mealPlan.meals.find(m => m.type === 'breakfast')),
+        lunch: transformMeal(mealPlan.meals.find(m => m.type === 'lunch')),
+        dinner: transformMeal(mealPlan.meals.find(m => m.type === 'dinner')),
+        snacks: mealPlan.meals
           .filter(m => m.type === 'snack')
           .map(transformMeal)
       },
-      totalMacros: calculateTotalMacros(activeMealPlan.meals),
+      totalMacros: calculateTotalMacros(mealPlan.meals),
       completed: [] // Initialize empty, will be tracked separately
-    };
+    }));
 
-    return NextResponse.json({ mealPlan: transformedMealPlan });
+    return NextResponse.json({ mealPlans: transformedMealPlans });
   } catch (error) {
-    console.error('Error fetching active meal plan:', error);
+    console.error('Error fetching active meal plans:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch active meal plan' },
+      { error: 'Failed to fetch active meal plans' },
       { status: 500 }
     );
   }

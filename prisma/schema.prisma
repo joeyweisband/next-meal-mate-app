@@ -37,11 +37,12 @@ model MealPlan {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+  date      String   @default("2025-01-01") // Date string in YYYY-MM-DD format for which day this plan is for
   createdAt DateTime @default(now())
   status    String   @default("active") // "active" or "historical"
   meals     Meal[]
 
-  @@index([userId, createdAt, status])
+  @@index([userId, date, status])
 }
 
 model Meal {

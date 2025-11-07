@@ -338,10 +338,9 @@ Return ONLY valid JSON.`;
       console.warn(`Warning: Meal plan calories (${totalCalories}) differ significantly from target (${targetCalories})`);
     }
 
-    // Mark all previous active meal plans as historical and save new one
+    // Save meal plan for the selected date
     if (userId) {
-      await markPreviousMealPlansAsHistorical(userId);
-      await saveMealPlanToDatabase(userId, mealPlan);
+      await saveMealPlanToDatabase(userId, selectedDate, mealPlan);
     }
 
     // Generate images for each meal
@@ -457,25 +456,21 @@ function getMetricsDescription(userMetrics: unknown): string {
   return `${metrics.age || 30} year old ${metrics.gender || 'person'}, ${metrics.height || 170}cm, ${metrics.weight || 70}kg, ${metrics.activityLevel || 'moderate'} activity level`;
 }
 
-// Helper function to mark previous meal plans as historical
-async function markPreviousMealPlansAsHistorical(userId: string): Promise<void> {
-  await prisma.mealPlan.updateMany({
+// Helper function to save meal plan to database for a specific date
+async function saveMealPlanToDatabase(userId: string, date: string, mealPlan: APIMealPlan): Promise<void> {
+  // Delete existing meal plan for this date if it exists
+  await prisma.mealPlan.deleteMany({
     where: {
       userId: userId,
-      status: 'active'
-    },
-    data: {
-      status: 'historical'
+      date: date
     }
   });
-  console.log('Marked previous active meal plans as historical');
-}
 
-// Helper function to save meal plan to database
-async function saveMealPlanToDatabase(userId: string, mealPlan: APIMealPlan): Promise<void> {
+  // Create new meal plan for this date
   await prisma.mealPlan.create({
     data: {
       userId: userId,
+      date: date,
       status: 'active',
       meals: {
         create: [
@@ -487,7 +482,7 @@ async function saveMealPlanToDatabase(userId: string, mealPlan: APIMealPlan): Pr
       }
     }
   });
-  console.log('Meal plan saved to database for user:', userId, 'with status: active');
+  console.log('Meal plan saved to database for user:', userId, 'date:', date);
 }
 
 // Helper function to create meal data object

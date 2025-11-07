@@ -43,30 +43,35 @@ export const useMealStore = create<MealState>()(
 
           const data = await response.json();
 
-          if (data.mealPlan) {
+          if (data.mealPlans && data.mealPlans.length > 0) {
             set((state: MealState) => ({
-              mealPlans: [data.mealPlan],
+              mealPlans: data.mealPlans,
               isLoading: false
             }));
 
-            // Initialize daily progress for the meal plan
-            const totalMeals = Object.values(data.mealPlan.meals).flat().length;
+            // Initialize daily progress for each meal plan
+            const newDailyProgress: Record<string, DailyProgress> = {};
+            data.mealPlans.forEach((mealPlan: MealPlan) => {
+              const totalMeals = Object.values(mealPlan.meals).flat().length;
+              newDailyProgress[mealPlan.date] = {
+                date: mealPlan.date,
+                targetMacros: mealPlan.totalMacros,
+                consumedMacros: {
+                  calories: 0,
+                  protein: 0,
+                  carbs: 0,
+                  fat: 0
+                },
+                waterIntake: 0,
+                completedMeals: 0,
+                totalMeals
+              };
+            });
+
             set((state: MealState) => ({
               dailyProgress: {
                 ...state.dailyProgress,
-                [data.mealPlan.date]: {
-                  date: data.mealPlan.date,
-                  targetMacros: data.mealPlan.totalMacros,
-                  consumedMacros: {
-                    calories: 0,
-                    protein: 0,
-                    carbs: 0,
-                    fat: 0
-                  },
-                  waterIntake: 0,
-                  completedMeals: 0,
-                  totalMeals
-                }
+                ...newDailyProgress
               }
             }));
           } else {
