@@ -42,12 +42,12 @@ export function calculateCaloriesFromMacros(protein: number, carbs: number, fat:
  * Validate individual meal macros
  * @param macros - The macros to validate
  * @param mealType - Type of meal (for context in error messages)
- * @param tolerancePercent - Acceptable error percentage (default 5%)
+ * @param tolerancePercent - Acceptable error percentage (default 10% to account for fiber, alcohol, etc.)
  */
 export function validateMealMacros(
   macros: Macros,
   mealType: string = 'meal',
-  tolerancePercent: number = 5
+  tolerancePercent: number = 10
 ): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -77,14 +77,15 @@ export function validateMealMacros(
   // Validate calorie calculation
   if (percentageError > tolerancePercent) {
     errors.push(
-      `${mealType}: Reported calories (${reportedCalories}) don't match calculated calories (${calculatedCalories}) from macros. ` +
+      `${mealType}: Reported calories (${reportedCalories}) differ significantly from calculated calories (${calculatedCalories}) from macros. ` +
       `Error: ${percentageError.toFixed(1)}% (tolerance: ${tolerancePercent}%). ` +
+      `Note: Real food contains fiber and other factors that may cause variance. ` +
       `Formula: (${macros.protein}g protein × 4) + (${macros.carbs}g carbs × 4) + (${macros.fat}g fat × 9) = ${calculatedCalories} cal`
     );
-  } else if (percentageError > 2) {
-    // Warning for errors between 2-5%
+  } else if (percentageError > 5) {
+    // Warning for errors between 5-10% (acceptable variance for real food)
     warnings.push(
-      `${mealType}: Minor discrepancy in calories. Reported: ${reportedCalories}, Calculated: ${calculatedCalories} (${percentageError.toFixed(1)}% difference)`
+      `${mealType}: Minor discrepancy in calories. Reported: ${reportedCalories}, Calculated: ${calculatedCalories} (${percentageError.toFixed(1)}% difference - within acceptable range for real food)`
     );
   }
 

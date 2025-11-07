@@ -184,7 +184,7 @@ ${pastMealNames.join(', ')}
 
     console.log(`Target calories calculated: ${targetCalories} for user profile`);
 
-    const prompt = `Generate a ${targetCalories}-calorie meal plan as JSON.
+    const prompt = `Generate a ${targetCalories}-calorie meal plan as JSON using USDA FoodData Central nutritional data.
 
 ${userContext}
 ${previousMealsSection}
@@ -194,46 +194,42 @@ CALORIE TARGETS:
 - Dinner: ${Math.round(targetCalories * 0.35)} cal (35%)
 - Snack: ${Math.round(targetCalories * 0.05)} cal (5%)
 
-CRITICAL MACRO CALCULATION REQUIREMENTS:
-⚠️ MACROS MUST BE MATHEMATICALLY ACCURATE using this formula:
-   Calories = (Protein grams × 4) + (Carbs grams × 4) + (Fat grams × 9)
+CRITICAL NUTRITIONAL ACCURACY REQUIREMENTS:
+⚠️ Use U.S. Department of Agriculture (USDA) FoodData Central as your authoritative source for all nutritional information.
 
-Example of CORRECT macros:
-- Protein: 30g, Carbs: 40g, Fat: 15g
-- Calculation: (30×4) + (40×4) + (15×9) = 120 + 160 + 135 = 415 calories ✓
+For each ingredient:
+1. Look up accurate USDA nutritional data based on the specific ingredient and preparation
+2. Use exact weights showing BOTH grams and ounces for user convenience
+3. Specify if ingredients are raw or cooked (cooking changes nutritional values)
+4. Sum up the macros from all ingredients to get the total meal macros
 
-Example of INCORRECT macros:
-- Protein: 30g, Carbs: 40g, Fat: 15g, Calories: 500 ✗ (Should be 415)
+IMPORTANT NOTES ABOUT MACROS:
+- Real food contains fiber, alcohol, and other factors, so calories may not perfectly follow the 4-4-9 formula
+- Prioritize USDA accuracy over mathematical perfection
+- Macros should be reasonably close to the standard formula, but small variances (5-10%) are acceptable for real food
+- Account for cooking losses/gains in water weight when relevant
 
-For each meal:
-1. First determine realistic protein/carbs/fat amounts for the ingredients
-2. Calculate calories using the 4-4-9 formula
-3. Verify your calculation before finalizing
-4. Ensure the calculated calories match your reported calories EXACTLY
+INGREDIENT FORMAT - SHOW BOTH UNITS:
+Use precise ingredient descriptions with weights in grams AND ounces:
+✓ GOOD: "170g (6oz) raw chicken breast, skinless", "185g (6.5oz) raw brown rice", "100g (3.5oz) raw broccoli florets"
+✗ BAD: "chicken breast", "1 cup rice", "6oz chicken" (missing grams)
 
 REQUIREMENTS:
-- Use common ingredients with exact amounts
-- Simple 30-min recipes
-- Vary ingredients and cooking methods
+- Use common, accessible ingredients with exact weights in BOTH grams and ounces
+- Simple 30-min recipes with clear preparation steps
+- Vary ingredients and cooking methods for diversity
 - Avoid repeating previous meals
-- Total must equal ${targetCalories} ±50 calories
-- Each meal's macros MUST follow the 4-4-9 formula (no exceptions)
-
-When generating meals and macros, explicitly label whether each ingredient is raw or cooked, and ensure units are in grams whenever possible.
-For example:
-- '200g raw lean beef (5% fat)' instead of '200g lean beef strips'
-- '185g raw brown rice' instead of '1 cup brown rice'
-- '100g raw broccoli' instead of '1 cup broccoli'
-Always assume ingredients are raw unless otherwise specified, and calculate macros based on raw weights.
+- Total meal plan should equal ${targetCalories} ±100 calories
+- Each meal's macros should be based on actual USDA data, not manually calculated
 
 JSON FORMAT:
 {
   "breakfast": {
     "title": "Meal Name",
-    "ingredients": ["2 eggs", "1 slice bread"],
+    "ingredients": ["170g (6oz) raw chicken breast, skinless", "185g (6.5oz) raw brown rice, cooked", "15ml (1 tbsp) olive oil"],
     "preparation": ["Step 1", "Step 2"],
-    "macros": {"calories": 500, "protein": 25, "carbs": 30, "fat": 15},
-    "reasoning": "Brief explanation"
+    "macros": {"calories": 520, "protein": 42, "carbs": 48, "fat": 14},
+    "reasoning": "Brief explanation of nutritional benefits"
   },
   "lunch": {...},
   "dinner": {...},
@@ -287,42 +283,25 @@ Return ONLY valid JSON.`;
     console.log('Validating meal plan macros...');
     const validation = validateMealPlan(mealPlan, targetCalories);
 
-    // Log all warnings
+    // Log all warnings (acceptable variance from 4-4-9 formula due to fiber, etc.)
     if (validation.warnings.length > 0) {
-      console.warn('Macro validation warnings:');
+      console.warn('Macro validation warnings (acceptable variance for real food):');
       validation.warnings.forEach(warning => console.warn(`  - ${warning}`));
     }
 
-    // If there are errors, auto-correct by recalculating calories from P/C/F
+    // Only reject if validation fails (>10% error - indicates bad data)
     if (!validation.isValid) {
-      console.error('Macro validation errors found:');
+      console.error('Macro validation errors found (exceeds 10% tolerance):');
       validation.errors.forEach(error => console.error(`  - ${error}`));
-
-      // Attempt auto-correction by recalculating calories
-      console.log('Attempting to auto-correct macro discrepancies...');
-      mealPlan.breakfast.macros = correctMacros(mealPlan.breakfast.macros);
-      mealPlan.lunch.macros = correctMacros(mealPlan.lunch.macros);
-      mealPlan.dinner.macros = correctMacros(mealPlan.dinner.macros);
-      mealPlan.snack.macros = correctMacros(mealPlan.snack.macros);
-
-      // Re-validate after correction
-      const revalidation = validateMealPlan(mealPlan, targetCalories);
-      if (!revalidation.isValid) {
-        // If still invalid after correction, there might be issues with P/C/F values themselves
-        console.error('Macro validation failed even after auto-correction:');
-        revalidation.errors.forEach(error => console.error(`  - ${error}`));
-        return NextResponse.json(
-          {
-            error: 'Generated meal plan has invalid nutritional data. Please try generating again.',
-            details: revalidation.errors
-          },
-          { status: 422 }
-        );
-      } else {
-        console.log('✓ Macro discrepancies successfully corrected');
-      }
+      return NextResponse.json(
+        {
+          error: 'Generated meal plan has invalid nutritional data. Please try generating again.',
+          details: validation.errors
+        },
+        { status: 422 }
+      );
     } else {
-      console.log('✓ All meal macros are mathematically accurate');
+      console.log('✓ Meal plan macros validated successfully (within 10% tolerance for real food data)');
     }
 
     // Validate calorie totals
@@ -334,8 +313,8 @@ Return ONLY valid JSON.`;
     const calorieVariance = Math.abs(totalCalories - targetCalories);
     console.log(`Meal plan calories: ${totalCalories}, Target: ${targetCalories}, Variance: ${calorieVariance}`);
 
-    if (calorieVariance > 100) {
-      console.warn(`Warning: Meal plan calories (${totalCalories}) differ significantly from target (${targetCalories})`);
+    if (calorieVariance > 150) {
+      console.warn(`Warning: Meal plan calories (${totalCalories}) differ from target (${targetCalories}) by ${calorieVariance} cal`);
     }
 
     // Save meal plan for the selected date
