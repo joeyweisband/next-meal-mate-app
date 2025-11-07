@@ -47,19 +47,24 @@ export async function POST(request: NextRequest) {
           timeframe: true
         }
       }),
-      // Get previous meal plans (simplified query)
+      // Get previous meal plans with their meals
       prisma.mealPlan.findMany({
         where: {
           userId: userId,
-          createdAt: {
-            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          date: {
+            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
           }
         },
-        select: {
-          breakfast_name: true,
-          lunch_name: true,
-          dinner_name: true,
-          snack_name: true
+        include: {
+          meals: {
+            select: {
+              name: true,
+              type: true
+            }
+          }
+        },
+        orderBy: {
+          date: 'desc'
         },
         take: 10 // Limit to last 10 meal plans
       })
@@ -69,17 +74,14 @@ export async function POST(request: NextRequest) {
     const userInfo = userData.status === 'fulfilled' ? userData.value : null;
     console.log("Meal Plan API - User data found:", userInfo ? 'Yes' : 'No');
 
-    // Extract previous meals safely
-    const pastMealNames = previousMeals.status === 'fulfilled' 
-      ? previousMeals.value.flatMap(plan => [
-          plan.breakfast_name,
-          plan.lunch_name,
-          plan.dinner_name,
-          plan.snack_name
-        ]).filter(Boolean)
+    // Extract previous meal names safely
+    const pastMealNames = previousMeals.status === 'fulfilled'
+      ? previousMeals.value.flatMap(plan =>
+          plan.meals.map(meal => meal.name)
+        ).filter(Boolean)
       : [];
-    
-    console.log('Previous meals from the last 7 days:', pastMealNames.length);
+
+    console.log('Previous meals from the last 7 days:', pastMealNames.length, pastMealNames.length > 0 ? `(${pastMealNames.slice(0, 5).join(', ')}${pastMealNames.length > 5 ? '...' : ''})` : '');
     
     // Build user context for meal generation
     let userContext = '';
