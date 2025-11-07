@@ -7,11 +7,13 @@ export interface DetailedMealCardProps {
 }
 
 export default function DetailedMealCard({ meal, onClose }: DetailedMealCardProps) {
-  const getMealTypeColor = (name: string) => {
-    if (name.toLowerCase().includes('breakfast')) return 'bg-orange-500';
-    if (name.toLowerCase().includes('lunch')) return 'bg-green-500';
-    if (name.toLowerCase().includes('dinner')) return 'bg-blue-600';
-    if (name.toLowerCase().includes('snack')) return 'bg-purple-500';
+  const getMealTypeColor = (name?: string) => {
+    if (!name) return 'bg-gray-500';
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('breakfast')) return 'bg-orange-500';
+    if (lowerName.includes('lunch')) return 'bg-green-500';
+    if (lowerName.includes('dinner')) return 'bg-blue-600';
+    if (lowerName.includes('snack')) return 'bg-purple-500';
     return 'bg-gray-500';
   };
 
@@ -50,18 +52,18 @@ export default function DetailedMealCard({ meal, onClose }: DetailedMealCardProp
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-black/50"></div>
           
           <div className={`absolute top-4 left-4 ${getMealTypeColor(meal.name)} text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg`}>
-            {meal.name.toLowerCase().includes('breakfast') ? '🌅 Breakfast' : 
-             meal.name.toLowerCase().includes('lunch') ? '☀️ Lunch' : 
-             meal.name.toLowerCase().includes('dinner') ? '🌙 Dinner' : '🍎 Snack'}
+            {meal.name?.toLowerCase().includes('breakfast') ? '🌅 Breakfast' :
+             meal.name?.toLowerCase().includes('lunch') ? '☀️ Lunch' :
+             meal.name?.toLowerCase().includes('dinner') ? '🌙 Dinner' : '🍎 Snack'}
           </div>
           
           <div className="absolute bottom-4 left-6 text-white">
             <h1 className="text-2xl font-black text-white" style={{
               textShadow: '2px 2px 4px rgba(0,0,0,1), 0px 0px 6px rgba(0,0,0,0.8), 1px 1px 2px rgba(0,0,0,1)'
-            }}>{meal.name}</h1>
+            }}>{meal.name || 'Meal'}</h1>
             <p className="text-white text-sm mt-1 font-semibold" style={{
               textShadow: '1px 1px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8)'
-            }}>{meal.prepTime + meal.cookTime} minutes to prepare</p>
+            }}>{(meal.prepTime || 0) + (meal.cookTime || 0)} minutes to prepare</p>
           </div>
         </div>
         

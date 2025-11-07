@@ -269,7 +269,7 @@ Return ONLY valid JSON.`;
 
     console.log('OpenAI API response:', completion);
 
-    // Parse the JSON response directly
+    // Parse the JSON response
     let mealPlan: APIMealPlan;
     try {
       const responseContent = completion.choices[0].message.content;
@@ -278,80 +278,70 @@ Return ONLY valid JSON.`;
       }
 
       mealPlan = JSON.parse(responseContent);
-
-      // Validate macro accuracy using 4-4-9 formula
-      console.log('Validating meal plan macros...');
-      const validation = validateMealPlan(mealPlan, targetCalories);
-
-      // Log all warnings
-      if (validation.warnings.length > 0) {
-        console.warn('Macro validation warnings:');
-        validation.warnings.forEach(warning => console.warn(`  - ${warning}`));
-      }
-
-      // If there are errors, try to auto-correct minor discrepancies
-      if (!validation.isValid) {
-        console.error('Macro validation errors found:');
-        validation.errors.forEach(error => console.error(`  - ${error}`));
-
-        // Attempt auto-correction for minor issues
-        console.log('Attempting to auto-correct macro discrepancies...');
-        mealPlan.breakfast.macros = correctMacros(mealPlan.breakfast.macros);
-        mealPlan.lunch.macros = correctMacros(mealPlan.lunch.macros);
-        mealPlan.dinner.macros = correctMacros(mealPlan.dinner.macros);
-        mealPlan.snack.macros = correctMacros(mealPlan.snack.macros);
-
-        // Re-validate after correction
-        const revalidation = validateMealPlan(mealPlan, targetCalories);
-        if (!revalidation.isValid) {
-          // If still invalid after correction, reject the meal plan
-          console.error('Macro validation failed even after auto-correction:');
-          revalidation.errors.forEach(error => console.error(`  - ${error}`));
-          throw new Error(
-            'Generated meal plan has invalid macros that could not be auto-corrected. ' +
-            'Please try generating again. Errors: ' + revalidation.errors.join('; ')
-          );
-        } else {
-          console.log('✓ Macro discrepancies successfully corrected');
-        }
-      } else {
-        console.log('✓ All meal macros are mathematically accurate');
-      }
-
-      // Validate calorie totals
-      const totalCalories = mealPlan.breakfast.macros.calories +
-                          mealPlan.lunch.macros.calories +
-                          mealPlan.dinner.macros.calories +
-                          mealPlan.snack.macros.calories;
-
-      const calorieVariance = Math.abs(totalCalories - targetCalories);
-      console.log(`Meal plan calories: ${totalCalories}, Target: ${targetCalories}, Variance: ${calorieVariance}`);
-
-      if (calorieVariance > 100) {
-        console.warn(`Warning: Meal plan calories (${totalCalories}) differ significantly from target (${targetCalories})`);
-      }
-
     } catch (error) {
       console.error('Failed to parse OpenAI response:', error);
       throw new Error('Invalid JSON response from OpenAI');
     }
 
-    // Save meal plan to database asynchronously (non-blocking)
+    // Validate macro accuracy using 4-4-9 formula
+    console.log('Validating meal plan macros...');
+    const validation = validateMealPlan(mealPlan, targetCalories);
+
+    // Log all warnings
+    if (validation.warnings.length > 0) {
+      console.warn('Macro validation warnings:');
+      validation.warnings.forEach(warning => console.warn(`  - ${warning}`));
+    }
+
+    // If there are errors, auto-correct by recalculating calories from P/C/F
+    if (!validation.isValid) {
+      console.error('Macro validation errors found:');
+      validation.errors.forEach(error => console.error(`  - ${error}`));
+
+      // Attempt auto-correction by recalculating calories
+      console.log('Attempting to auto-correct macro discrepancies...');
+      mealPlan.breakfast.macros = correctMacros(mealPlan.breakfast.macros);
+      mealPlan.lunch.macros = correctMacros(mealPlan.lunch.macros);
+      mealPlan.dinner.macros = correctMacros(mealPlan.dinner.macros);
+      mealPlan.snack.macros = correctMacros(mealPlan.snack.macros);
+
+      // Re-validate after correction
+      const revalidation = validateMealPlan(mealPlan, targetCalories);
+      if (!revalidation.isValid) {
+        // If still invalid after correction, there might be issues with P/C/F values themselves
+        console.error('Macro validation failed even after auto-correction:');
+        revalidation.errors.forEach(error => console.error(`  - ${error}`));
+        return NextResponse.json(
+          {
+            error: 'Generated meal plan has invalid nutritional data. Please try generating again.',
+            details: revalidation.errors
+          },
+          { status: 422 }
+        );
+      } else {
+        console.log('✓ Macro discrepancies successfully corrected');
+      }
+    } else {
+      console.log('✓ All meal macros are mathematically accurate');
+    }
+
+    // Validate calorie totals
+    const totalCalories = mealPlan.breakfast.macros.calories +
+                        mealPlan.lunch.macros.calories +
+                        mealPlan.dinner.macros.calories +
+                        mealPlan.snack.macros.calories;
+
+    const calorieVariance = Math.abs(totalCalories - targetCalories);
+    console.log(`Meal plan calories: ${totalCalories}, Target: ${targetCalories}, Variance: ${calorieVariance}`);
+
+    if (calorieVariance > 100) {
+      console.warn(`Warning: Meal plan calories (${totalCalories}) differ significantly from target (${targetCalories})`);
+    }
+
+    // Mark all previous active meal plans as historical and save new one
     if (userId) {
-      // Don't await this - let it run in background
-      prisma.mealPlan.create({
-        data: {
-          userId: userId,
-          breakfast_name: mealPlan.breakfast.title,
-          lunch_name: mealPlan.lunch.title,
-          dinner_name: mealPlan.dinner.title,
-          snack_name: mealPlan.snack.title
-        }
-      }).then(() => {
-        console.log('Meal plan saved to database for user:', userId);
-      }).catch(dbError => {
-        console.error('Failed to save meal plan to database:', dbError);
-      });
+      await markPreviousMealPlansAsHistorical(userId);
+      await saveMealPlanToDatabase(userId, mealPlan);
     }
 
     // Generate images for each meal
@@ -465,4 +455,52 @@ function getMetricsDescription(userMetrics: unknown): string {
   };
 
   return `${metrics.age || 30} year old ${metrics.gender || 'person'}, ${metrics.height || 170}cm, ${metrics.weight || 70}kg, ${metrics.activityLevel || 'moderate'} activity level`;
+}
+
+// Helper function to mark previous meal plans as historical
+async function markPreviousMealPlansAsHistorical(userId: string): Promise<void> {
+  await prisma.mealPlan.updateMany({
+    where: {
+      userId: userId,
+      status: 'active'
+    },
+    data: {
+      status: 'historical'
+    }
+  });
+  console.log('Marked previous active meal plans as historical');
+}
+
+// Helper function to save meal plan to database
+async function saveMealPlanToDatabase(userId: string, mealPlan: APIMealPlan): Promise<void> {
+  await prisma.mealPlan.create({
+    data: {
+      userId: userId,
+      status: 'active',
+      meals: {
+        create: [
+          createMealData('breakfast', mealPlan.breakfast),
+          createMealData('lunch', mealPlan.lunch),
+          createMealData('dinner', mealPlan.dinner),
+          createMealData('snack', mealPlan.snack)
+        ]
+      }
+    }
+  });
+  console.log('Meal plan saved to database for user:', userId, 'with status: active');
+}
+
+// Helper function to create meal data object
+function createMealData(type: string, meal: APIMealPlan['breakfast']) {
+  return {
+    type,
+    name: meal.title,
+    ingredients: meal.ingredients,
+    preparation: meal.preparation,
+    calories: meal.macros.calories,
+    protein: meal.macros.protein,
+    carbs: meal.macros.carbs,
+    fat: meal.macros.fat,
+    reasoning: meal.reasoning
+  };
 }

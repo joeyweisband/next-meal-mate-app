@@ -185,24 +185,16 @@ export function validateMealPlan(mealPlan: {
 }
 
 /**
- * Auto-correct minor macro discrepancies by recalculating calories from P/C/F
- * Only corrects if error is within the tolerance range
+ * Auto-correct macro discrepancies by recalculating calories from P/C/F
+ * Uses the 4-4-9 formula to calculate the correct calorie value
  */
-export function correctMacros(macros: Macros, tolerancePercent: number = 5): Macros {
-  const validation = validateMealMacros(macros, 'meal', tolerancePercent);
+export function correctMacros(macros: Macros, tolerancePercent?: number): Macros {
+  // Calculate the correct calories from protein/carbs/fat using 4-4-9 formula
+  const calculatedCalories = calculateCaloriesFromMacros(macros.protein, macros.carbs, macros.fat);
 
-  if (!validation.isValid || !validation.calculatedCalories) {
-    // Don't auto-correct if there are major errors
-    return macros;
-  }
-
-  // If there's a discrepancy but within tolerance, use calculated calories
-  if (validation.percentageError && validation.percentageError > 0) {
-    return {
-      ...macros,
-      calories: validation.calculatedCalories,
-    };
-  }
-
-  return macros;
+  // Always use the calculated calories to ensure accuracy
+  return {
+    ...macros,
+    calories: calculatedCalories,
+  };
 }

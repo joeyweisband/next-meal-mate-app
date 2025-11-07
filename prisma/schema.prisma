@@ -34,12 +34,29 @@ model User {
 }
 
 model MealPlan {
-  id             String   @id @default(uuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id])
-  createdAt      DateTime @default(now())
-  breakfast_name String
-  lunch_name     String
-  dinner_name    String
-  snack_name     String
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  status    String   @default("active") // "active" or "historical"
+  meals     Meal[]
+
+  @@index([userId, createdAt, status])
+}
+
+model Meal {
+  id           String   @id @default(uuid())
+  mealPlanId   String
+  mealPlan     MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  type         String   // "breakfast", "lunch", "dinner", "snack"
+  name         String
+  ingredients  String[] @default([])
+  preparation  String[] @default([])
+  calories     Float
+  protein      Float
+  carbs        Float
+  fat          Float
+  reasoning    String?
+
+  @@index([mealPlanId, type])
 }

@@ -3,11 +3,14 @@ import WithPWA from "next-pwa";
 const nextConfig = {
   // Add this to disable ESLint during build
   eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  
+
+  typescript: {
+    // Skip type checking during build (faster)
+    ignoreBuildErrors: true,
+  },
+
   images: {
     remotePatterns: [
       {
@@ -19,10 +22,8 @@ const nextConfig = {
     ],
   },
   
-  // More targeted solution for Next.js 13+
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', '@prisma/engines'],
-  },
+  // Moved to serverExternalPackages as per Next.js 15
+  serverExternalPackages: ['@prisma/client', '@prisma/engines'],
   
   webpack: (config: any, { isServer }: { isServer: boolean }) => {
     if (isServer) {

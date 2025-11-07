@@ -12,6 +12,7 @@ export default function MealPlanScreen() {
   const {
     mealPlans,
     generateAIMealPlan,
+    fetchActiveMealPlan,
     isLoading,
     error
   } = useMealStore();
@@ -21,6 +22,11 @@ export default function MealPlanScreen() {
   // Removed selectedMealIds and selectedMeals state
   const [detailedMeal, setDetailedMeal] = useState<MealRecipe | null>(null);
   const selectedPlan = mealPlans.find((plan: MealPlan) => plan.date === selectedDate);
+
+  // Fetch active meal plan on mount
+  useEffect(() => {
+    fetchActiveMealPlan();
+  }, []);
 
   // If you want to force reset to today on mount (optional, but ensures consistency)
   useEffect(() => {

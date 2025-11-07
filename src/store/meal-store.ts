@@ -11,8 +11,9 @@ interface MealState {
   isLoading: boolean;
   error: string | null;
   userProfile: User | null;
-  
+
   // Actions
+  fetchActiveMealPlan: () => Promise<void>;
   generateAIMealPlan: (date?: string) => Promise<void>;
   markMealAsCompleted: (date: string, mealIndex: number, completed: boolean) => void;
   swapMeal: (date: string, mealType: string, newMeal: MealRecipe) => void;
@@ -31,50 +32,81 @@ export const useMealStore = create<MealState>()(
       error: null,
       userProfile: null,
 
+      fetchActiveMealPlan: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await fetch('/api/active-meal-plan');
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch active meal plan');
+          }
+
+          const data = await response.json();
+
+          if (data.mealPlan) {
+            set((state: MealState) => ({
+              mealPlans: [data.mealPlan],
+              isLoading: false
+            }));
+
+            // Initialize daily progress for the meal plan
+            const totalMeals = Object.values(data.mealPlan.meals).flat().length;
+            set((state: MealState) => ({
+              dailyProgress: {
+                ...state.dailyProgress,
+                [data.mealPlan.date]: {
+                  date: data.mealPlan.date,
+                  targetMacros: data.mealPlan.totalMacros,
+                  consumedMacros: {
+                    calories: 0,
+                    protein: 0,
+                    carbs: 0,
+                    fat: 0
+                  },
+                  waterIntake: 0,
+                  completedMeals: 0,
+                  totalMeals
+                }
+              }
+            }));
+          } else {
+            set({ mealPlans: [], isLoading: false });
+          }
+        } catch (error) {
+          console.error('Failed to fetch active meal plan:', error);
+          set({
+            error: error instanceof Error ? error.message : "Failed to fetch meal plan",
+            isLoading: false
+          });
+        }
+      },
+
       generateAIMealPlan: async (date?: string) => {
         const state = get();
         set({ isLoading: true, error: null });
         try {
           const targetDate = date || new Date().toISOString().split('T')[0];
-          const aiMealPlan = await generateDailyMealPlan(
-            state.userProfile?.goal,
-            state.userProfile?.dietPreferences,
-            state.userProfile?.metrics
-          );
-          
-          // Update the date to match the target date
-          aiMealPlan.date = targetDate;
-          aiMealPlan.id = `ai-plan-${targetDate}-${Date.now()}`;
-          
-          set((state: MealState) => ({ 
-            mealPlans: [...state.mealPlans.filter(p => p.date !== targetDate), aiMealPlan],
-            isLoading: false 
-          }));
-          
-          const totalMeals = Object.values(aiMealPlan.meals).flat().length;
-          set((state: MealState) => ({
-            dailyProgress: {
-              ...state.dailyProgress,
-              [aiMealPlan.date]: {
-                date: aiMealPlan.date,
-                targetMacros: aiMealPlan.totalMacros,
-                consumedMacros: {
-                  calories: 0,
-                  protein: 0,
-                  carbs: 0,
-                  fat: 0
-                },
-                waterIntake: 0,
-                completedMeals: 0,
-                totalMeals
-              }
-            }
-          }));
+
+          // Call the API to generate meal plan
+          const response = await fetch('/api/generate-meal-plan', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ date: targetDate })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to generate meal plan');
+          }
+
+          // After generation, fetch the active meal plan from database
+          await get().fetchActiveMealPlan();
         } catch (error) {
           console.error('AI meal plan generation failed:', error);
-          set({ 
-            error: error instanceof Error ? error.message : "Failed to generate AI meal plan", 
-            isLoading: false 
+          set({
+            error: error instanceof Error ? error.message : "Failed to generate AI meal plan",
+            isLoading: false
           });
         }
       },
