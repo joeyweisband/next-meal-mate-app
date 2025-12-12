@@ -184,6 +184,7 @@ const UserInfoPage: React.FC = () => {
   const fitnessGoalOptions = [
     { label: 'Lose Weight', value: 'lose_weight' },
     { label: 'Maintain Weight', value: 'maintain_weight' },
+    { label: 'Gain Weight', value: 'gain_weight' },
     { label: 'Gain Muscle', value: 'gain_muscle' },
     { label: 'Improve Overall Health', value: 'improve_health' },
     { label: 'Increase Energy', value: 'increase_energy' },
@@ -332,7 +333,7 @@ const UserInfoPage: React.FC = () => {
           />
 
           {/* Target Weight (optional) */}
-          {fitnessGoals.includes('lose_weight') || fitnessGoals.includes('gain_muscle') ? (
+          {fitnessGoals.includes('lose_weight') || fitnessGoals.includes('gain_weight') || fitnessGoals.includes('gain_muscle') ? (
             <FormField
               label={`Target Weight (pounds) - ${fitnessGoals.includes('lose_weight') ? 'Goal weight' : 'Target weight'}`}
               value={targetWeight}
@@ -343,7 +344,7 @@ const UserInfoPage: React.FC = () => {
           ) : null}
 
           {/* Timeframe */}
-          {(fitnessGoals.includes('lose_weight') || fitnessGoals.includes('gain_muscle')) && targetWeight ? (
+          {(fitnessGoals.includes('lose_weight') || fitnessGoals.includes('gain_weight') || fitnessGoals.includes('gain_muscle')) && targetWeight ? (
             <FormField
               label="Timeframe (weeks)"
               value={timeframe}
