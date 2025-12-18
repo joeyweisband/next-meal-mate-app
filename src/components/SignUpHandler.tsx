@@ -42,14 +42,8 @@ export default function SignUpHandler() {
         setSuccess(true);
         setIsCreatingUser(false);
 
-        // Redirect based on welcome and onboarding status
-        if (!testResult.user?.welcome_shown) {
-          router.push('/welcome');
-        } else if (testResult.user?.onboarding_completed) {
-          router.push('/meal-plan');
-        } else {
-          router.push('/user-info');
-        }
+        // Always show welcome page after sign-up
+        router.push('/welcome');
         return;
       }
       
@@ -69,17 +63,8 @@ export default function SignUpHandler() {
       if (result.success) {
         setSuccess(true);
 
-        // Check user status
-        const userResponse = await fetch('/api/user');
-        const userData = await userResponse.json();
-
-        if (!userData.welcomeShown) {
-          router.push('/welcome');
-        } else if (userData.onboardingCompleted) {
-          router.push('/meal-plan');
-        } else {
-          router.push('/user-info');
-        }
+        // Always show welcome page after sign-up
+        router.push('/welcome');
       } else {
         setError('Failed to create user record');
       }

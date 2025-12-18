@@ -3,7 +3,6 @@ import { ClerkProvider, useUser } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import { useEffect } from "react";
 import { Calendar, User, Settings, Heart } from "lucide-react";
-import WelcomeRedirect from "@/components/WelcomeRedirect";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -72,7 +71,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   if (isSignedIn) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <WelcomeRedirect />
         <div style={{ flex: 1, paddingBottom: 64 }}>{children}</div>
         <nav style={{
           position: 'fixed',

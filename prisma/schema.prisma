@@ -28,7 +28,6 @@ model User {
   allergies            String[]       @default([])
   custom_restrictions  String?
   onboarding_completed Boolean        @default(false)
-  welcome_shown        Boolean        @default(false)
   MealPlan             MealPlan[]
   FavoriteMeal         FavoriteMeal[]
   clerkId              String         @unique

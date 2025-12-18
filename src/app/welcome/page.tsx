@@ -21,17 +21,22 @@ export default function WelcomePage() {
       setAnimationStage('spinDown');
     }, 2800); // Show welcome for 2.2 seconds
 
-    const timer3 = setTimeout(() => {
-      // Mark welcome as shown and redirect to user-info
-      fetch('/api/user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          welcome_shown: true,
-        }),
-      }).finally(() => {
+    const timer3 = setTimeout(async () => {
+      // Check if user has completed onboarding to decide where to redirect
+      try {
+        const response = await fetch('/api/user');
+        const userData = await response.json();
+
+        if (userData.onboardingCompleted) {
+          router.push('/meal-plan');
+        } else {
+          router.push('/user-info');
+        }
+      } catch (error) {
+        console.error('Error checking user status:', error);
+        // Default to user-info if there's an error
         router.push('/user-info');
-      });
+      }
     }, 3600); // Spin down completes
 
     return () => {

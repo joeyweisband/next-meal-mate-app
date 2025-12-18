@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
         customRestrictions: dbUser.custom_restrictions,
       },
       onboardingCompleted: dbUser.onboarding_completed,
-      welcomeShown: dbUser.welcome_shown,
     });
   } catch (error) {
     console.error('Error fetching user data:', error);
@@ -84,8 +83,7 @@ export async function POST(request: NextRequest) {
         diet_type: data.dietPreferences?.dietType,
         allergies: data.dietPreferences?.allergies,
         custom_restrictions: data.dietPreferences?.customRestrictions,
-        onboarding_completed: data.onboardingCompleted !== undefined ? data.onboardingCompleted : true,
-        welcome_shown: data.welcome_shown !== undefined ? data.welcome_shown : undefined
+        onboarding_completed: data.onboardingCompleted !== undefined ? data.onboardingCompleted : true
       },
       create: {
         id: userId,
@@ -104,8 +102,7 @@ export async function POST(request: NextRequest) {
         diet_type: data.dietPreferences?.dietType || [],
         allergies: data.dietPreferences?.allergies || [],
         custom_restrictions: data.dietPreferences?.customRestrictions,
-        onboarding_completed: data.onboardingCompleted || false,
-        welcome_shown: data.welcome_shown || false
+        onboarding_completed: data.onboardingCompleted || false
       }
     });
     
