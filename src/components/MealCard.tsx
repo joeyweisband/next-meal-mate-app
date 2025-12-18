@@ -10,13 +10,29 @@ interface MealCardProps {
   onMarkCompleted?: (completed: boolean) => void;
 }
 
-const MealCard: React.FC<MealCardProps> = ({ 
-  meal, 
-  mealType, 
-  completed = false, 
-  onMarkCompleted 
+const MealCard: React.FC<MealCardProps> = ({
+  meal,
+  mealType,
+  completed = false,
+  onMarkCompleted
 }) => {
+  const getMealTypeIcon = (type: string) => {
+    switch(type.toLowerCase()) {
+      case 'breakfast':
+        return '🌅';
+      case 'lunch':
+        return '☀️';
+      case 'dinner':
+        return '🌙';
+      case 'snack':
+        return '🍎';
+      default:
+        return '🍽️';
+    }
+  };
+
   const formattedMealType = mealType.charAt(0).toUpperCase() + mealType.slice(1);
+  const mealIcon = getMealTypeIcon(mealType);
   
   return (
     <div
@@ -72,7 +88,7 @@ const MealCard: React.FC<MealCardProps> = ({
           color: "white",
           fontSize: 12,
           fontWeight: 600,
-        }}>{formattedMealType}</div>
+        }}>{mealIcon} {formattedMealType}</div>
       </div>
       <div style={{ padding: theme.spacing.md }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
