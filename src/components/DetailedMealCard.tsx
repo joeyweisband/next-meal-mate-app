@@ -10,19 +10,16 @@ export interface DetailedMealCardProps {
 }
 
 export default function DetailedMealCard({ meal, mealType, onClose }: DetailedMealCardProps) {
-  const { addToFavorites, removeFromFavorites, isMealFavorited, fetchFavoriteMealIds } = useMealStore();
-  const [isFavorited, setIsFavorited] = useState(false);
+  const { addToFavorites, removeFromFavorites, isMealFavorited, fetchFavoriteMealIds, favoriteMealIds } = useMealStore();
   const [isUpdatingFavorite, setIsUpdatingFavorite] = useState(false);
 
   useEffect(() => {
     // Fetch favorites on mount
     fetchFavoriteMealIds();
-  }, [fetchFavoriteMealIds]);
+  }, []);
 
-  useEffect(() => {
-    // Update favorited state when meal or favorites change
-    setIsFavorited(isMealFavorited(meal.name));
-  }, [meal.name, isMealFavorited]);
+  // Check if meal is favorited based on the store state
+  const isFavorited = isMealFavorited(meal.name);
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -39,7 +36,6 @@ export default function DetailedMealCard({ meal, mealType, onClose }: DetailedMe
            meal.name.toLowerCase().includes('dinner') ? 'dinner' : 'snack');
         await addToFavorites(meal, type);
       }
-      setIsFavorited(!isFavorited);
     } catch (error) {
       console.error('Error toggling favorite:', error);
     } finally {

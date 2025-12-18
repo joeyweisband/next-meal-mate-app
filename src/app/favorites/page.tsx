@@ -23,6 +23,13 @@ export default function FavoritesScreen() {
       const response = await fetch('/api/favorites');
 
       if (!response.ok) {
+        // Don't show error for authentication issues, just show empty state
+        if (response.status === 401) {
+          console.log('User not authenticated yet');
+          setFavorites([]);
+          setIsLoading(false);
+          return;
+        }
         throw new Error('Failed to fetch favorites');
       }
 
@@ -30,7 +37,8 @@ export default function FavoritesScreen() {
       setFavorites(data.favorites || []);
     } catch (err) {
       console.error('Error fetching favorites:', err);
-      setError('Failed to load favorites');
+      // Only show error if it's a real server error, not auth issues
+      setError('Failed to load favorites. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -38,6 +46,7 @@ export default function FavoritesScreen() {
 
   const handleRemoveFavorite = async (favoriteId: string) => {
     try {
+      setError(null);
       const response = await fetch('/api/favorites', {
         method: 'DELETE',
         headers: {
@@ -54,7 +63,7 @@ export default function FavoritesScreen() {
       await fetchFavorites();
     } catch (err) {
       console.error('Error removing favorite:', err);
-      setError('Failed to remove favorite');
+      setError('Failed to remove favorite. Please try again.');
     }
   };
 
