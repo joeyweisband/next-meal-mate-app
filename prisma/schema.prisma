@@ -13,7 +13,7 @@ datasource db {
 }
 
 model User {
-  id                   String     @id
+  id                   String         @id
   name                 String
   email                String
   feet                 Int?
@@ -22,15 +22,16 @@ model User {
   age                  Int?
   gender               String?
   activity_level       String?
-  goal_type            String[]   @default([])
+  goal_type            String[]       @default([])
   target_weight        Float?
   timeframe            Int?
-  diet_type            String[]   @default([])
-  allergies            String[]   @default([])
+  diet_type            String[]       @default([])
+  allergies            String[]       @default([])
   custom_restrictions  String?
-  onboarding_completed Boolean    @default(false)
+  onboarding_completed Boolean        @default(false)
   MealPlan             MealPlan[]
-  clerkId              String     @unique
+  FavoriteMeal         FavoriteMeal[]
+  clerkId              String         @unique
 }
 
 model MealPlan {
@@ -60,4 +61,22 @@ model Meal {
   reasoning    String?
 
   @@index([mealPlanId, type])
+}
+
+model FavoriteMeal {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  type        String   // "breakfast", "lunch", "dinner", "snack"
+  ingredients String[] @default([])
+  preparation String[] @default([])
+  calories    Float
+  protein     Float
+  carbs       Float
+  fat         Float
+  reasoning   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
 }
