@@ -8,9 +8,40 @@ export default function WelcomePage() {
   const router = useRouter();
   const { user, isLoaded } = useUser();
   const [animationStage, setAnimationStage] = useState<'pullUp' | 'show' | 'spinDown'>('pullUp');
+  const [userCreated, setUserCreated] = useState(false);
+
+  // Create user in database if they don't exist (handles new sign-ups)
+  useEffect(() => {
+    if (!isLoaded || !user || userCreated) return;
+
+    const ensureUserExists = async () => {
+      try {
+        console.log('Welcome - Ensuring user exists in database:', user.id);
+
+        const response = await fetch('/api/test-create-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            name: user.fullName || user.username || 'New User',
+            email: user.emailAddresses[0]?.emailAddress || '',
+          }),
+        });
+
+        const result = await response.json();
+        console.log('Welcome - User creation result:', result);
+        setUserCreated(true);
+      } catch (error) {
+        console.error('Welcome - Error ensuring user exists:', error);
+        setUserCreated(true); // Continue anyway
+      }
+    };
+
+    ensureUserExists();
+  }, [isLoaded, user, userCreated]);
 
   useEffect(() => {
-    if (!isLoaded || !user) return;
+    if (!isLoaded || !user || !userCreated) return;
 
     // Animation sequence
     const timer1 = setTimeout(() => {
@@ -44,7 +75,7 @@ export default function WelcomePage() {
       clearTimeout(timer2);
       clearTimeout(timer3);
     };
-  }, [isLoaded, user, router]);
+  }, [isLoaded, user, userCreated, router]);
 
   if (!isLoaded || !user) {
     return null;
