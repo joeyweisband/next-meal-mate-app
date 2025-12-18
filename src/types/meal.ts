@@ -52,3 +52,17 @@ export interface DailyProgress {
   completedMeals: number;
   totalMeals: number;
 }
+
+export interface FavoriteMeal {
+  id: string;
+  name: string;
+  type: string; // "breakfast", "lunch", "dinner", "snack"
+  ingredients: string[];
+  preparation: string[];
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  reasoning?: string;
+  createdAt: string;
+}

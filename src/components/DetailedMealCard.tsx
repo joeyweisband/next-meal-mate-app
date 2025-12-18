@@ -1,12 +1,51 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MealRecipe } from '../types/meal';
+import { useMealStore } from '../store/meal-store';
+import { Heart } from 'lucide-react';
 
 export interface DetailedMealCardProps {
   meal: MealRecipe;
+  mealType?: string;
   onClose: () => void;
 }
 
-export default function DetailedMealCard({ meal, onClose }: DetailedMealCardProps) {
+export default function DetailedMealCard({ meal, mealType, onClose }: DetailedMealCardProps) {
+  const { addToFavorites, removeFromFavorites, isMealFavorited, fetchFavoriteMealIds } = useMealStore();
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isUpdatingFavorite, setIsUpdatingFavorite] = useState(false);
+
+  useEffect(() => {
+    // Fetch favorites on mount
+    fetchFavoriteMealIds();
+  }, [fetchFavoriteMealIds]);
+
+  useEffect(() => {
+    // Update favorited state when meal or favorites change
+    setIsFavorited(isMealFavorited(meal.name));
+  }, [meal.name, isMealFavorited]);
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsUpdatingFavorite(true);
+
+    try {
+      if (isFavorited) {
+        await removeFromFavorites(meal.name);
+      } else {
+        // Determine meal type from meal name if not provided
+        const type = mealType ||
+          (meal.name.toLowerCase().includes('breakfast') ? 'breakfast' :
+           meal.name.toLowerCase().includes('lunch') ? 'lunch' :
+           meal.name.toLowerCase().includes('dinner') ? 'dinner' : 'snack');
+        await addToFavorites(meal, type);
+      }
+      setIsFavorited(!isFavorited);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    } finally {
+      setIsUpdatingFavorite(false);
+    }
+  };
   const getMealTypeColor = (name?: string) => {
     if (!name) return 'bg-gray-500';
     const lowerName = name.toLowerCase();
@@ -20,13 +59,29 @@ export default function DetailedMealCard({ meal, onClose }: DetailedMealCardProp
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 modal-overlay">
       <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto modal-content">
-        {/* Close button */}
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-md z-20"
-        >
-          ✕
-        </button>
+        {/* Close and Favorite buttons */}
+        <div className="absolute top-4 right-4 flex gap-2 z-20">
+          <button
+            onClick={handleToggleFavorite}
+            disabled={isUpdatingFavorite}
+            className={`bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-md transition-all ${
+              isUpdatingFavorite ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'
+            }`}
+            title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            <Heart
+              size={20}
+              color={isFavorited ? '#e74c3c' : '#6c757d'}
+              fill={isFavorited ? '#e74c3c' : 'none'}
+            />
+          </button>
+          <button
+            onClick={onClose}
+            className="bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-md hover:scale-110 transition-all"
+          >
+            ✕
+          </button>
+        </div>
         
         {/* Meal image header - Replace gradient with actual image */}
         <div className="h-64 relative rounded-t-2xl overflow-hidden">

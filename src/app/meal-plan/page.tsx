@@ -21,6 +21,7 @@ export default function MealPlanScreen() {
   const [selectedDate, setSelectedDate] = useState(today);
   // Removed selectedMealIds and selectedMeals state
   const [detailedMeal, setDetailedMeal] = useState<MealRecipe | null>(null);
+  const [detailedMealType, setDetailedMealType] = useState<string>('');
   const selectedPlan = mealPlans.find((plan: MealPlan) => plan.date === selectedDate);
 
   // Fetch active meal plan on mount
@@ -35,12 +36,14 @@ export default function MealPlanScreen() {
 
   // Removed handleMealPress and setSelectedMealIds
 
-  const handleMealDetailView = (meal: MealRecipe) => {
+  const handleMealDetailView = (meal: MealRecipe, mealType: string) => {
     setDetailedMeal(meal);
+    setDetailedMealType(mealType);
   };
 
   const handleCloseDetailView = () => {
     setDetailedMeal(null);
+    setDetailedMealType('');
   };
 
   const handlePreviousDay = () => {
@@ -358,8 +361,8 @@ export default function MealPlanScreen() {
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {selectedPlan?.meals?.breakfast?.id && (
-              <div 
-                onClick={() => handleMealDetailView(selectedPlan.meals.breakfast!)}
+              <div
+                onClick={() => handleMealDetailView(selectedPlan.meals.breakfast!, 'breakfast')}
                 style={{ cursor: 'pointer' }}
               >
                 <MealCard
@@ -370,8 +373,8 @@ export default function MealPlanScreen() {
               </div>
             )}
             {selectedPlan?.meals?.lunch?.id && (
-              <div 
-                onClick={() => handleMealDetailView(selectedPlan.meals.lunch!)}
+              <div
+                onClick={() => handleMealDetailView(selectedPlan.meals.lunch!, 'lunch')}
                 style={{ cursor: 'pointer' }}
               >
                 <MealCard
@@ -382,8 +385,8 @@ export default function MealPlanScreen() {
               </div>
             )}
             {selectedPlan?.meals?.dinner?.id && (
-              <div 
-                onClick={() => handleMealDetailView(selectedPlan.meals.dinner!)}
+              <div
+                onClick={() => handleMealDetailView(selectedPlan.meals.dinner!, 'dinner')}
                 style={{ cursor: 'pointer' }}
               >
                 <MealCard
@@ -394,9 +397,9 @@ export default function MealPlanScreen() {
               </div>
             )}
             {Array.isArray(selectedPlan?.meals?.snacks) && selectedPlan.meals.snacks.map((snack: MealRecipe) => (
-              <div 
+              <div
                 key={snack.id}
-                onClick={() => handleMealDetailView(snack)}
+                onClick={() => handleMealDetailView(snack, 'snack')}
                 style={{ cursor: 'pointer' }}
               >
                 <MealCard
@@ -412,7 +415,7 @@ export default function MealPlanScreen() {
       {/* Removed SelectedMealsSummary component */}
       {/* Detailed meal card modal */}
       {detailedMeal && (
-        <DetailedMealCard meal={detailedMeal} onClose={handleCloseDetailView} />
+        <DetailedMealCard meal={detailedMeal} mealType={detailedMealType} onClose={handleCloseDetailView} />
       )}
     </div>
   );
