@@ -1,24 +1,13 @@
 "use client";
 
-import { SignUp, useAuth } from '@clerk/nextjs';
-import SignUpHandler from '@/components/SignUpHandler';
+import { SignUp } from '@clerk/nextjs';
 
 export default function SignUpPage() {
-  const { isSignedIn } = useAuth();
-
-  // If user is signed in, show the handler component
-  if (isSignedIn) {
-    return <SignUpHandler />;
-  }
-
-  // Otherwise show the sign-up form
-  // Keep user on sign-up page after completion so SignUpHandler can run
+  // No need for afterSignUpUrl - environment variable NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL
+  // will handle redirecting to /welcome, where user creation will happen
   return (
     <div className="flex justify-center py-24">
-      <SignUp
-        afterSignUpUrl="/sign-up"
-        signUpUrl="/sign-up"
-      />
+      <SignUp />
     </div>
   );
 }
