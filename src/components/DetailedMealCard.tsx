@@ -42,14 +42,24 @@ export default function DetailedMealCard({ meal, mealType, onClose }: DetailedMe
       setIsUpdatingFavorite(false);
     }
   };
-  const getMealTypeColor = (name?: string) => {
-    if (!name) return 'bg-gray-500';
-    const lowerName = name.toLowerCase();
-    if (lowerName.includes('breakfast')) return 'bg-orange-500';
-    if (lowerName.includes('lunch')) return 'bg-green-500';
-    if (lowerName.includes('dinner')) return 'bg-blue-600';
-    if (lowerName.includes('snack')) return 'bg-purple-500';
+  const getMealTypeColor = (type?: string) => {
+    if (!type) return 'bg-gray-500';
+    const lowerType = type.toLowerCase();
+    if (lowerType === 'breakfast') return 'bg-orange-500';
+    if (lowerType === 'lunch') return 'bg-green-500';
+    if (lowerType === 'dinner') return 'bg-blue-600';
+    if (lowerType === 'snack') return 'bg-purple-500';
     return 'bg-gray-500';
+  };
+
+  const getMealTypeLabel = (type?: string) => {
+    if (!type) return '🍽️ Meal';
+    const lowerType = type.toLowerCase();
+    if (lowerType === 'breakfast') return '🌅 Breakfast';
+    if (lowerType === 'lunch') return '☀️ Lunch';
+    if (lowerType === 'dinner') return '🌙 Dinner';
+    if (lowerType === 'snack') return '🍎 Snack';
+    return '🍽️ Meal';
   };
 
   return (
@@ -102,10 +112,8 @@ export default function DetailedMealCard({ meal, mealType, onClose }: DetailedMe
           {/* Overlay for better text readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/95 to-black/60"></div>
 
-          <div className={`absolute top-4 left-4 ${getMealTypeColor(meal.name)} text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg`}>
-            {meal.name?.toLowerCase().includes('breakfast') ? '🌅 Breakfast' :
-             meal.name?.toLowerCase().includes('lunch') ? '☀️ Lunch' :
-             meal.name?.toLowerCase().includes('dinner') ? '🌙 Dinner' : '🍎 Snack'}
+          <div className={`absolute top-4 left-4 ${getMealTypeColor(mealType)} text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg`}>
+            {getMealTypeLabel(mealType)}
           </div>
 
           <div className="absolute bottom-4 left-6">
