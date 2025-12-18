@@ -391,6 +391,18 @@ export const useMealStore = create<MealState>()(
     }),
     {
       name: 'meal-storage',
+      version: 1,
+      migrate: (persistedState: any, version: number) => {
+        // Migrate from old Set-based favoriteMealIds to array
+        if (version === 0) {
+          const state = persistedState as MealState;
+          // If favoriteMealIds is a Set (or an object that's not an array), convert it to an array
+          if (state.favoriteMealIds && !Array.isArray(state.favoriteMealIds)) {
+            state.favoriteMealIds = [];
+          }
+        }
+        return persistedState as MealState;
+      },
     }
   )
 );
