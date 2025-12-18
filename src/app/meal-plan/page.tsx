@@ -126,29 +126,7 @@ export default function MealPlanScreen() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {selectedPlan && (
-            <button 
-              onClick={handleGenerateAIPlan}
-              disabled={isLoading}
-              style={{ 
-                background: isLoading ? '#f8f9fa' : '#667eea',
-                color: isLoading ? '#6c757d' : 'white',
-                border: 'none', 
-                fontSize: '0.875rem', 
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                padding: '0.5rem 0.75rem',
-                borderRadius: '0.375rem',
-                fontWeight: '500',
-                transition: 'all 0.2s'
-              }}
-              title="Regenerate with AI"
-            >
-              {isLoading ? '...' : '🤖'}
-            </button>
-          )}
-          
-          <button 
+        <button 
             onClick={handleNextDay} 
             disabled={
               (() => {
@@ -182,7 +160,6 @@ export default function MealPlanScreen() {
           >
             →
           </button>
-        </div>
       </div>
 
       {/* Error message */}
