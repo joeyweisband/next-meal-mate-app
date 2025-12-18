@@ -10,13 +10,15 @@ export default function SignUpHandler() {
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [hasRun, setHasRun] = useState(false);
 
   useEffect(() => {
-    if (isLoaded && user && !isCreatingUser && !success) {
+    if (isLoaded && user && !isCreatingUser && !success && !hasRun) {
+      setHasRun(true);
       setIsCreatingUser(true);
       createUserRecord();
     }
-  }, [isLoaded, user, success]);
+  }, [isLoaded, user, success, hasRun]);
 
   const createUserRecord = async () => {
     if (!user) return;
