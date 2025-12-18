@@ -216,9 +216,38 @@ Use precise ingredient descriptions with weights in grams AND ounces:
 ✓ GOOD: "170g (6oz) raw chicken breast, skinless", "185g (6.5oz) raw brown rice", "100g (3.5oz) raw broccoli florets"
 ✗ BAD: "chicken breast", "1 cup rice", "6oz chicken" (missing grams)
 
+SEASONINGS & SPICES - CULTURALLY APPROPRIATE:
+ALWAYS include appropriate seasonings and spices for each recipe. Tailor them to the dish style:
+- Indian dishes: cumin, turmeric, garam masala, coriander, ginger, etc.
+- Mediterranean: oregano, basil, garlic, lemon, olive oil, etc.
+- Mexican: cumin, chili powder, cilantro, lime, paprika, etc.
+- Asian: soy sauce, ginger, garlic, sesame oil, rice vinegar, etc.
+- Basic/Western: salt, black pepper, garlic powder, onion powder, herbs, etc.
+
+Include seasonings in the ingredients list with measurements (e.g., "1 tsp salt", "2 tsp cumin", "3 cloves garlic")
+
+COOKING INSTRUCTIONS - BE DETAILED AND SPECIFIC:
+Each preparation step MUST include:
+1. SPECIFIC TIME: "Cook for 5-7 minutes" NOT "Cook until done"
+2. HEAT LEVEL: "medium-high heat", "375°F", "simmer on low", etc.
+3. VISUAL/TEXTURE CUES: "until golden brown", "internal temp 165°F", "until tender", "until fragrant"
+4. TECHNIQUE DETAILS: How to cut, stir, flip, season, etc.
+
+✓ GOOD PREPARATION STEPS:
+- "Heat 1 tbsp olive oil in a large skillet over medium-high heat until shimmering, about 2 minutes"
+- "Season chicken with 1 tsp salt, 1/2 tsp black pepper, and 1 tsp paprika. Add to hot pan and cook for 6-7 minutes per side until internal temperature reaches 165°F and outside is golden brown"
+- "Add minced garlic and ginger, stirring constantly for 30 seconds until fragrant"
+
+✗ BAD PREPARATION STEPS:
+- "Cook the chicken"
+- "Add spices"
+- "Heat until done"
+
 REQUIREMENTS:
 - Use common, accessible ingredients with exact weights in BOTH grams and ounces
-- Simple 30-min recipes with clear preparation steps
+- Simple 30-min recipes with DETAILED, SPECIFIC preparation steps
+- ALWAYS include seasonings and spices appropriate to the dish style
+- Include cooking times, temperatures, and visual cues for each step
 - Vary ingredients and cooking methods for diversity
 - Avoid repeating previous meals
 - Total meal plan should equal ${targetCalories} ±100 calories
@@ -228,8 +257,23 @@ JSON FORMAT:
 {
   "breakfast": {
     "title": "Meal Name",
-    "ingredients": ["170g (6oz) raw chicken breast, skinless", "185g (6.5oz) raw brown rice, cooked", "15ml (1 tbsp) olive oil"],
-    "preparation": ["Step 1", "Step 2"],
+    "ingredients": [
+      "170g (6oz) raw chicken breast, skinless",
+      "185g (6.5oz) raw brown rice",
+      "15ml (1 tbsp) olive oil",
+      "1 tsp salt",
+      "1/2 tsp black pepper",
+      "1 tsp paprika",
+      "2 cloves garlic, minced"
+    ],
+    "preparation": [
+      "Cook rice according to package directions with a pinch of salt, about 15-20 minutes. Set aside.",
+      "Season chicken breast with salt, black pepper, and paprika on both sides.",
+      "Heat olive oil in a large skillet over medium-high heat until shimmering, about 2 minutes.",
+      "Add chicken and cook for 6-7 minutes per side until internal temperature reaches 165°F and outside is golden brown.",
+      "In the last minute of cooking, add minced garlic to the pan and stir for 30 seconds until fragrant.",
+      "Let chicken rest for 3 minutes before slicing. Serve over brown rice."
+    ],
     "macros": {"calories": 520, "protein": 42, "carbs": 48, "fat": 14},
     "reasoning": "Brief explanation of nutritional benefits"
   },
