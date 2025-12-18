@@ -24,7 +24,13 @@ const LoadingModal: React.FC<LoadingModalProps> = ({ isVisible }) => {
     }
 
     const interval = setInterval(() => {
-      setCookingStep((prev) => (prev + 1) % cookingMessages.length);
+      setCookingStep((prev) => {
+        // Stop at the last message instead of looping
+        if (prev < cookingMessages.length - 1) {
+          return prev + 1;
+        }
+        return prev;
+      });
     }, 2000);
 
     return () => clearInterval(interval);
