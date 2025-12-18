@@ -11,7 +11,7 @@ interface MealState {
   isLoading: boolean;
   error: string | null;
   userProfile: User | null;
-  favoriteMealIds: Set<string>;
+  favoriteMealIds: string[];
 
   // Actions
   fetchActiveMealPlan: () => Promise<void>;
@@ -36,7 +36,7 @@ export const useMealStore = create<MealState>()(
       isLoading: false,
       error: null,
       userProfile: null,
-      favoriteMealIds: new Set(),
+      favoriteMealIds: [],
 
       fetchActiveMealPlan: async () => {
         set({ isLoading: true, error: null });
@@ -293,16 +293,22 @@ export const useMealStore = create<MealState>()(
       fetchFavoriteMealIds: async () => {
         try {
           const response = await fetch('/api/favorites');
-          if (!response.ok) throw new Error('Failed to fetch favorites');
+          if (!response.ok) {
+            // Don't throw error, just return empty array
+            console.log('Failed to fetch favorites, user may not be authenticated yet');
+            set({ favoriteMealIds: [] });
+            return;
+          }
 
           const data = await response.json();
           const favorites = data.favorites || [];
 
           // Store meal names as the identifier for favorited meals
-          const favoriteMealIds = new Set(favorites.map((fav: FavoriteMeal) => fav.name));
+          const favoriteMealIds = favorites.map((fav: FavoriteMeal) => fav.name);
           set({ favoriteMealIds });
         } catch (error) {
           console.error('Failed to fetch favorite meal IDs:', error);
+          set({ favoriteMealIds: [] });
         }
       },
 
@@ -333,9 +339,9 @@ export const useMealStore = create<MealState>()(
 
           if (!response.ok) throw new Error('Failed to add to favorites');
 
-          // Update the favoriteMealIds set
+          // Update the favoriteMealIds array
           set((state: MealState) => ({
-            favoriteMealIds: new Set([...state.favoriteMealIds, meal.name])
+            favoriteMealIds: [...state.favoriteMealIds, meal.name]
           }));
         } catch (error) {
           console.error('Failed to add to favorites:', error);
@@ -369,12 +375,10 @@ export const useMealStore = create<MealState>()(
 
           if (!deleteResponse.ok) throw new Error('Failed to remove from favorites');
 
-          // Update the favoriteMealIds set
-          set((state: MealState) => {
-            const newFavoriteMealIds = new Set(state.favoriteMealIds);
-            newFavoriteMealIds.delete(mealName);
-            return { favoriteMealIds: newFavoriteMealIds };
-          });
+          // Update the favoriteMealIds array
+          set((state: MealState) => ({
+            favoriteMealIds: state.favoriteMealIds.filter(id => id !== mealName)
+          }));
         } catch (error) {
           console.error('Failed to remove from favorites:', error);
           set({ error: 'Failed to remove from favorites' });
@@ -382,7 +386,7 @@ export const useMealStore = create<MealState>()(
       },
 
       isMealFavorited: (mealName: string) => {
-        return get().favoriteMealIds.has(mealName);
+        return get().favoriteMealIds.includes(mealName);
       }
     }),
     {
