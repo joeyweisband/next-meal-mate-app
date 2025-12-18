@@ -12,10 +12,13 @@ export default function SignUpPage() {
   }
 
   // Otherwise show the sign-up form
-  // Note: No afterSignUpUrl here because SignUpHandler will handle the redirect to /welcome
+  // Keep user on sign-up page after completion so SignUpHandler can run
   return (
     <div className="flex justify-center py-24">
-      <SignUp />
+      <SignUp
+        afterSignUpUrl="/sign-up"
+        signUpUrl="/sign-up"
+      />
     </div>
   );
 }
