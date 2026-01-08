@@ -137,7 +137,10 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="512x512" href="/web-app-manifest-512x512.png" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ClerkProvider>
+        <ClerkProvider
+          signInFallbackRedirectUrl="/welcome"
+          signUpFallbackRedirectUrl="/welcome"
+        >
           <LayoutContent>{children}</LayoutContent>
         </ClerkProvider>
       </body>

@@ -4,6 +4,7 @@ import Card from '../../components/Card';
 import Button from '../../components/Button';
 import MealCard from '../../components/MealCard';
 import DetailedMealCard from '../../components/DetailedMealCard';
+import LoadingModal from '../../components/LoadingModal';
 // Removed SelectedMealsSummary import
 import { useMealStore } from '../../store/meal-store';
 import { MealPlan, MealRecipe } from '../../types/meal';
@@ -126,29 +127,7 @@ export default function MealPlanScreen() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {selectedPlan && (
-            <button 
-              onClick={handleGenerateAIPlan}
-              disabled={isLoading}
-              style={{ 
-                background: isLoading ? '#f8f9fa' : '#667eea',
-                color: isLoading ? '#6c757d' : 'white',
-                border: 'none', 
-                fontSize: '0.875rem', 
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                padding: '0.5rem 0.75rem',
-                borderRadius: '0.375rem',
-                fontWeight: '500',
-                transition: 'all 0.2s'
-              }}
-              title="Regenerate with AI"
-            >
-              {isLoading ? '...' : '🤖'}
-            </button>
-          )}
-          
-          <button 
+        <button 
             onClick={handleNextDay} 
             disabled={
               (() => {
@@ -182,7 +161,6 @@ export default function MealPlanScreen() {
           >
             →
           </button>
-        </div>
       </div>
 
       {/* Error message */}
@@ -236,11 +214,11 @@ export default function MealPlanScreen() {
               maxWidth: '300px',
               margin: '0 auto'
             }}>
-              <Button 
-                title="🤖 Generate AI Meal Plan" 
-                onClick={handleGenerateAIPlan} 
-                loading={isLoading}
-                style={{ 
+              <Button
+                title="Generate AI Meal Plan"
+                onClick={handleGenerateAIPlan}
+                disabled={isLoading}
+                style={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
                   border: 'none',
@@ -249,7 +227,7 @@ export default function MealPlanScreen() {
                   fontSize: '1rem',
                   fontWeight: '600',
                   boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
-                }} 
+                }}
               />
             </div>
           </div>
@@ -327,11 +305,11 @@ export default function MealPlanScreen() {
               gap: '0.75rem', 
               flexWrap: 'wrap'
             }}>
-              <Button 
-                title="🤖 AI-Powered Plan" 
-                onClick={handleGenerateAIPlan} 
-                loading={isLoading}
-                style={{ 
+              <Button
+                title="AI-Powered Plan"
+                onClick={handleGenerateAIPlan}
+                disabled={isLoading}
+                style={{
                   flex: 1,
                   minWidth: '140px',
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -342,7 +320,7 @@ export default function MealPlanScreen() {
                   fontSize: '0.875rem',
                   fontWeight: '600',
                   boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
-                }} 
+                }}
               />
             </div>
           </Card>
@@ -417,6 +395,9 @@ export default function MealPlanScreen() {
       {detailedMeal && (
         <DetailedMealCard meal={detailedMeal} mealType={detailedMealType} onClose={handleCloseDetailView} />
       )}
+
+      {/* Loading Modal */}
+      <LoadingModal isVisible={isLoading} />
     </div>
   );
 }

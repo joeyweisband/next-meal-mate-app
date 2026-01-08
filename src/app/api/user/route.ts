@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
         diet_type: data.dietPreferences?.dietType,
         allergies: data.dietPreferences?.allergies,
         custom_restrictions: data.dietPreferences?.customRestrictions,
-        onboarding_completed: true
+        onboarding_completed: data.onboardingCompleted !== undefined ? data.onboardingCompleted : true
       },
       create: {
         id: userId,

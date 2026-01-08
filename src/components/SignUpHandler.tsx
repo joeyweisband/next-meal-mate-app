@@ -10,13 +10,15 @@ export default function SignUpHandler() {
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [hasRun, setHasRun] = useState(false);
 
   useEffect(() => {
-    if (isLoaded && user && !isCreatingUser && !success) {
+    if (isLoaded && user && !isCreatingUser && !success && !hasRun) {
+      setHasRun(true);
       setIsCreatingUser(true);
       createUserRecord();
     }
-  }, [isLoaded, user, success]);
+  }, [isLoaded, user, success, hasRun]);
 
   const createUserRecord = async () => {
     if (!user) return;
@@ -41,13 +43,9 @@ export default function SignUpHandler() {
       if (testResult.success) {
         setSuccess(true);
         setIsCreatingUser(false);
-        
-        // Redirect based on onboarding status
-        if (testResult.user?.onboarding_completed) {
-          router.push('/meal-plan');
-        } else {
-          router.push('/user-info');
-        }
+
+        // Always show welcome page after sign-up
+        router.push('/welcome');
         return;
       }
       
@@ -66,16 +64,9 @@ export default function SignUpHandler() {
       
       if (result.success) {
         setSuccess(true);
-        
-        // Check user status
-        const userResponse = await fetch('/api/user');
-        const userData = await userResponse.json();
-        
-        if (userData.onboardingCompleted) {
-          router.push('/meal-plan');
-        } else {
-          router.push('/user-info');
-        }
+
+        // Always show welcome page after sign-up
+        router.push('/welcome');
       } else {
         setError('Failed to create user record');
       }
